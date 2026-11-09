@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Dialog from './Dialog.jsx';
 import { toast } from './toast.jsx';
 import { emptyTrade, normalizeTrade, validateTrade, RESULTS, SIDES, MODE_LABELS } from '../core/domain/trade.js';
-import { effectivePnl } from '../core/domain/money.js';
+import { effectivePnl, pipValueInfo } from '../core/domain/money.js';
 import { money } from '../format.js';
 import { saveTrade, deleteTrade } from '../store.js';
 
@@ -22,6 +22,7 @@ export default function TradeForm({ trade, settings, onClose }) {
   const set = (k) => (e) => setT((x) => ({ ...x, [k]: e.target.value }));
   const norm = useMemo(() => normalizeTrade({ ...t, tags: t.tags }), [t]);
   const est = effectivePnl(norm, settings);
+  const pv = norm.pair ? pipValueInfo(norm.pair, settings) : null;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -62,7 +63,8 @@ export default function TradeForm({ trade, settings, onClose }) {
           <Field errors={errors} k="risk" label={`Risque (${settings.currency})`}><input inputMode="decimal" value={text(t.risk)} onChange={set('risk')} /></Field>
           <Field errors={errors} k="pnl" label={`Résultat net (${settings.currency})`}><input inputMode="decimal" value={text(t.pnl)} onChange={set('pnl')} placeholder="vide = estimation" /></Field>
           <Field errors={errors} k="fees" label={`Frais (${settings.currency})`}><input inputMode="decimal" value={text(t.fees)} onChange={set('fees')} /></Field>
-          <div className="wide est" aria-live="polite">{est ? <>Résultat pris en compte : <b>{est.estimated ? '≈ ' : ''}{money(est.value, settings, { sign: true })}</b>{est.estimated ? ' (estimé : pips × lots × valeur du pip − frais)' : ' (saisi)'}</> : 'Saisis le résultat net, ou les pips et les lots pour obtenir une estimation.'}</div>
+          <div className="wide est" aria-live="polite">{est ? <>Résultat pris en compte : <b>{est.estimated ? '≈ ' : ''}{money(est.value, settings, { sign: true })}</b>{est.estimated ? ` : ${norm.pips} pips × ${norm.lots} lot(s) × ${money(pv.value, settings, { digits: 2 })} par pip${norm.fees ? ' − frais' : ''}` : ' (saisi)'}</> : 'Saisis les pips et les lots : le résultat est calculé tout seul. Ou saisis directement le résultat net de ton courtier.'}
+            {pv && est?.estimated && <div className="sub" style={{ marginTop: 4 }}>Valeur du pip pour 1 lot sur {norm.pair} : {money(pv.value, settings, { digits: 2 })} ({pv.source === 'manuel' ? 'fixée par toi dans les réglages' : pv.source === 'calculé' ? 'calculée d\'après la devise de la paire' : 'valeur par défaut : cette paire n\'est pas une paire de devises'}).</div>}</div>
           <Field errors={errors} k="notes" label="Notes" wide><textarea value={t.notes} onChange={set('notes')} placeholder="Ce qui s'est passé, ce que tu as ressenti, ce que tu retiens…" /></Field>
           <Field errors={errors} k="tags" label="Étiquettes (séparées par des virgules)" wide><input value={tagsValue} onChange={(e) => setT((x) => ({ ...x, tags: e.target.value }))} /></Field>
         </div>

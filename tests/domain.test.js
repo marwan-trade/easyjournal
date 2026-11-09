@@ -193,3 +193,27 @@ test('fournisseur FMP : conversion et erreurs lisibles', async () => {
   await assert.rejects(fetchFmpEvents({ from: 'a', to: 'b', key: '', fetchImpl: fake(200, []) }), (err) => err.code === 'nokey');
   await assert.rejects(fetchFmpEvents({ from: 'a', to: 'b', key: 'k', fetchImpl: async () => { throw new TypeError('fail'); } }), (err) => err.code === 'network');
 });
+
+import { pipValueInfo, splitPair, pipSize } from '../src/core/domain/money.js';
+
+test('valeur du pip calculée selon la paire (compte en USD)', () => {
+  const s = { currency: 'USD', defaultPipValue: 10, pipValues: {}, conversionRates: {} };
+  assert.deepEqual(splitPair('gbp/usd'), { base: 'GBP', quote: 'USD' });
+  assert.equal(pipSize('USDJPY'), 0.01); assert.equal(pipSize('EURUSD'), 0.0001);
+  assert.equal(pipValueInfo('GBPUSD', s).value, 10);                       // cotée en USD : 10 $ par pip et par lot
+  assert.ok(Math.abs(pipValueInfo('USDJPY', s).value - 6.7) < 0.01);       // 1000 ¥ × 0,0067
+  assert.ok(Math.abs(pipValueInfo('AUDCAD', s).value - 7.2) < 0.01);       // 10 CAD × 0,72
+  assert.equal(pipValueInfo('USDJPY', { ...s, conversionRates: { JPY: 0.0065 } }).value, 6.5);
+  assert.deepEqual(pipValueInfo('USDJPY', { ...s, pipValues: { USDJPY: 7 } }), { value: 7, source: 'manuel' });
+  assert.equal(pipValueInfo('XAUUSD', s).source, 'défaut');                // l'or n'est pas une paire de devises : repli
+  assert.equal(pipValueInfo('US30', s).source, 'défaut');                  // indice : repli
+  assert.equal(pipValueInfo('EURUSD', { ...s, currency: 'EUR' }).source, 'défaut'); // compte en EUR sans taux : repli sans inventer
+});
+
+test('estimation de l\'argent : pips × lots × valeur du pip − frais', () => {
+  const s = { currency: 'USD', defaultPipValue: 10, pipValues: {}, conversionRates: {} };
+  const t = normalizeTrade({ date: '2026-01-05', pair: 'GBPUSD', result: 'Gagnant', pips: 45, lots: 0.2, fees: 1 });
+  assert.equal(effectivePnl(t, s).value, 89);                              // 45 × 0,2 × 10 − 1
+  const jpy = normalizeTrade({ date: '2026-01-05', pair: 'USDJPY', result: 'Perdant', pips: 30, lots: 0.5 });
+  assert.ok(Math.abs(effectivePnl(jpy, s).value + 100.5) < 0.01);          // −30 × 0,5 × 6,7
+});

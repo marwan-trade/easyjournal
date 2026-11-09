@@ -7,8 +7,9 @@ export const DEFAULT_SETTINGS = {
   mode: 'reel', // mode affiché
   currency: 'USD',
   initialCapital: { reel: 0, backtest: 0 },
-  defaultPipValue: 10, // valeur d'un pip pour 1 lot, devise du compte (estimation)
-  pipValues: {}, // { GBPUSD: 10, USDJPY: 6.5 }
+  defaultPipValue: 10, // repli si la paire est inconnue (or, indices…)
+  pipValues: {}, // valeur forcée par paire : { USDJPY: 6.5 } (sinon calculée automatiquement)
+  conversionRates: {}, // taux perso : valeur de 1 unité de la devise dans la devise du compte { JPY: 0.0065 }
   pairs: ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDCAD', 'EURGBP'],
   scenarios: ['Scénario 1', 'Scénario 2', 'Scénario 3', 'Scénario 4'],
   timeframes: ['3min BOS', '5min BOS', '15min BOS', '15min/5min BOS', '45min BOS', 'Pas de confirmation'],

@@ -5,11 +5,52 @@
  */
 import { applyResultSign, signedPips } from './trade.js';
 
-/** Valeur d'un pip pour 1 lot standard, dans la devise du compte. */
-export function pipValueFor(pair, settings) {
-  const v = settings?.pipValues?.[pair];
-  return Number.isFinite(v) && v > 0 ? v : (settings?.defaultPipValue ?? 10);
+/** Taille de lot standard : 1 lot = 100 000 unités de la devise de base. */
+export const LOT_UNITS = 100000;
+
+/**
+ * Taux indicatifs : combien vaut 1 unité de chaque devise, en DOLLARS américains.
+ * Approximatifs (ils bougent chaque jour) : à ajuster dans les réglages si tu veux plus de précision.
+ */
+export const DEFAULT_RATES_USD = { USD: 1, EUR: 1.08, GBP: 1.3, JPY: 0.0067, CAD: 0.72, CHF: 1.12, AUD: 0.65, NZD: 0.6 };
+
+/** « GBPUSD » → { base: 'GBP', quote: 'USD' } ; null si ce n'est pas une paire de devises (or, indices…). */
+export function splitPair(pair) {
+  const s = String(pair ?? '').toUpperCase().replace(/[^A-Z]/g, '');
+  return s.length === 6 ? { base: s.slice(0, 3), quote: s.slice(3) } : null;
 }
+/** Un pip vaut 0,01 sur les paires en yen, 0,0001 sinon. */
+export const pipSize = (pair) => (splitPair(pair)?.quote === 'JPY' ? 0.01 : 0.0001);
+
+/** Valeur de 1 unité de `cur` dans la devise du compte, ou null si inconnue. */
+export function rateToAccount(cur, settings) {
+  const account = String(settings?.currency ?? 'USD').toUpperCase();
+  if (cur === account) return 1;
+  const custom = settings?.conversionRates?.[cur];
+  if (Number.isFinite(custom) && custom > 0) return custom;
+  if (account === 'USD' && DEFAULT_RATES_USD[cur]) return DEFAULT_RATES_USD[cur];
+  return null;
+}
+
+/**
+ * Valeur d'un pip pour 1 lot, dans la devise du compte, avec sa provenance :
+ *  1. valeur forcée par l'utilisateur pour cette paire (settings.pipValues) ;
+ *  2. calcul : taille du pip × 100 000 × taux de la devise de cotation ;
+ *  3. à défaut, la valeur par défaut des réglages.
+ * @returns {{value:number, source:'manuel'|'calculé'|'défaut'}}
+ */
+export function pipValueInfo(pair, settings) {
+  const forced = settings?.pipValues?.[pair];
+  if (Number.isFinite(forced) && forced > 0) return { value: forced, source: 'manuel' };
+  const p = splitPair(pair);
+  // Seules les paires de devises sont calculées : l'or, les indices et les cryptos ont d'autres règles.
+  const fx = p && p.base in DEFAULT_RATES_USD && p.quote in DEFAULT_RATES_USD;
+  const rate = fx ? rateToAccount(p.quote, settings) : null;
+  if (fx && rate) return { value: pipSize(pair) * LOT_UNITS * rate, source: 'calculé' };
+  return { value: settings?.defaultPipValue ?? 10, source: 'défaut' };
+}
+
+export const pipValueFor = (pair, settings) => pipValueInfo(pair, settings).value;
 
 /**
  * Résultat net d'un trade.

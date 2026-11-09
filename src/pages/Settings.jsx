@@ -11,6 +11,8 @@ import { toast } from '../components/toast.jsx';
 import { getApiKey, setApiKey, clearCache, isDemoCalendar, setDemoCalendar } from '../core/calendar/cache.js';
 import { fetchFmpEvents } from '../core/calendar/fmp.js';
 import { weekRange } from '../core/calendar/events.js';
+import { pipValueInfo, splitPair, rateToAccount, DEFAULT_RATES_USD } from '../core/domain/money.js';
+import { money } from '../format.js';
 
 function download(name, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
@@ -26,6 +28,8 @@ export default function Settings({ state }) {
   const [prepared, setPrepared] = useState(null);
   const [wipe, setWipe] = useState(false);
   const [confirm, setConfirm] = useState('');
+  const pairsList = [...new Set([...s.pairs, ...state.trades.map((t) => t.pair)].filter(Boolean))].sort();
+  const quoteCurrencies = [...new Set(pairsList.map((pr) => splitPair(pr)).filter((p) => p && p.base in DEFAULT_RATES_USD && p.quote in DEFAULT_RATES_USD && p.quote !== s.currency).map((p) => p.quote))].sort();
   const [apiKey, setKey] = useState(getApiKey);
   const [test, setTest] = useState(null);
   const runTest = async () => {
@@ -47,9 +51,27 @@ export default function Settings({ state }) {
           <label className="f">Devise du compte<input defaultValue={s.currency} onBlur={(e) => saveSettings({ currency: e.target.value.trim().toUpperCase() || 'USD' })} /></label>
           <label className="f">Capital de départ · Réel (argent de départ du compte réel)<input inputMode="decimal" defaultValue={s.initialCapital.reel} onBlur={(e) => saveSettings({ initialCapital: { ...s.initialCapital, reel: num(e.target.value) } })} /></label>
           <label className="f">Capital de départ · Backtest (capital fictif)<input inputMode="decimal" defaultValue={s.initialCapital.backtest} onBlur={(e) => saveSettings({ initialCapital: { ...s.initialCapital, backtest: num(e.target.value) } })} /></label>
-          <label className="f">Valeur d'un pip pour 1 lot<input inputMode="decimal" defaultValue={s.defaultPipValue} onBlur={(e) => saveSettings({ defaultPipValue: num(e.target.value) || 10 })} /></label>
+          <label className="f">Valeur du pip par défaut (or, indices…)<input inputMode="decimal" defaultValue={s.defaultPipValue} onBlur={(e) => saveSettings({ defaultPipValue: num(e.target.value) || 10 })} /></label>
         </div>
-        <p className="sub" style={{ marginTop: 8 }}><b>Capital de départ</b> : la courbe d'argent part de ce montant et le drawdown en % se calcule dessus. <b>Valeur du pip</b> : sert seulement à estimer le gain ou la perte (pips × lots × valeur du pip) quand tu ne saisis pas le montant réel de ton courtier.</p>
+        <p className="sub" style={{ marginTop: 8 }}><b>Capital de départ</b> : la courbe d'argent part de ce montant et le drawdown en % se calcule dessus.</p>
+      </section>
+      <section className="card" style={{ '--i': 1 }}>
+        <h2>Valeur du pip et calcul de l'argent</h2>
+        <p className="sub">Tu saisis les <b>pips</b> et les <b>lots</b> d'un trade : EasyJournal calcule l'argent d'après la devise de la paire (pips × lots × valeur du pip). Si tu saisis le résultat réel de ton courtier, il passe avant le calcul.</p>
+        <div className="tablewrap"><table><thead><tr><th>Paire</th><th className="num">1 pip pour 1 lot</th><th>Origine</th><th>Forcer une valeur</th></tr></thead><tbody>
+          {pairsList.map((pr) => { const info = pipValueInfo(pr, s); return (
+            <tr key={pr} style={{ cursor: 'default' }}><td><b>{pr}</b></td><td className="num">{money(info.value, s, { digits: 2 })}</td><td>{info.source}</td>
+              <td><input inputMode="decimal" style={{ width: 110 }} defaultValue={s.pipValues[pr] ?? ''} placeholder="auto" aria-label={`Valeur du pip forcée pour ${pr}`} onBlur={(e) => { const v = num(e.target.value); const next = { ...s.pipValues }; if (v > 0) next[pr] = v; else delete next[pr]; saveSettings({ pipValues: next }); }} /></td></tr>); })}
+        </tbody></table></div>
+        {quoteCurrencies.length > 0 && <>
+          <h3>Taux de conversion</h3>
+          <p className="sub" style={{ marginBottom: 8 }}>Quand une paire n'est pas cotée dans la devise de ton compte ({s.currency}), il faut convertir. Ces taux sont <b>indicatifs</b> : ajuste-les (valeur de 1 unité en {s.currency}) pour plus de précision.</p>
+          <div className="formgrid">
+            {quoteCurrencies.map((c) => { const r = rateToAccount(c, s); return (
+              <label className="f" key={c}>1 {c} = ? {s.currency}<input inputMode="decimal" defaultValue={s.conversionRates[c] ?? ''} placeholder={r ? String(r) : 'à renseigner'} onBlur={(e) => { const v = num(e.target.value); const next = { ...s.conversionRates }; if (v > 0) next[c] = v; else delete next[c]; saveSettings({ conversionRates: next }); }} /></label>); })}
+          </div>
+          {s.currency !== 'USD' && <p className="banner" style={{ marginTop: 10 }}>Ton compte n'est pas en USD : renseigne les taux ci-dessus pour obtenir un calcul automatique.</p>}
+        </>}
       </section>
       <section className="card" style={{ '--i': 1 }}>
         <h2>Calendrier économique</h2>
@@ -69,7 +91,7 @@ export default function Settings({ state }) {
         <p className="sub" style={{ marginTop: 10 }}>La clé reste dans ce navigateur : elle n'est jamais envoyée ailleurs que chez le fournisseur et n'apparaît pas dans tes sauvegardes.{isDemoCalendar() ? ' Les exemples fictifs sont actifs.' : ''}</p>
       </section>
       <section className="card" style={{ '--i': 2 }}>
-        <h2>Listes de suggestions</h2><p className="sub">Ce sont les choix proposés quand tu remplis un trade (paires, scénarios, confirmations). Une valeur par ligne.</p>
+        <h2>Choix proposés dans le formulaire</h2><p className="sub">Quand tu ajoutes un trade, les champs Paire, Scénario et Confirmation te proposent ces valeurs en liste, pour ne pas les retaper. Une valeur par ligne ; tu peux toujours en taper une autre, elle sera ajoutée ici automatiquement.</p>
         <div className="formgrid" style={{ marginTop: 10 }}>
           {[['pairs', 'Paires'], ['scenarios', 'Scénarios'], ['timeframes', 'Confirmations']].map(([k, l]) => (
             <label className="f" key={k}>{l}<textarea defaultValue={s[k].join('\n')} onBlur={(e) => saveSettings({ [k]: list(e.target.value) })} /></label>
