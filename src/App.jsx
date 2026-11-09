@@ -8,6 +8,7 @@ import Journal from './pages/Journal.jsx';
 import Analysis from './pages/Analysis.jsx';
 import Ideas from './pages/Ideas.jsx';
 import Settings from './pages/Settings.jsx';
+import { startAutoSync, useSyncStatus } from './sync.js';
 import { MODE_LABELS } from './core/domain/trade.js';
 
 const ROUTES = [
@@ -27,11 +28,12 @@ const useHashRoute = () => {
 
 export default function App() {
   const state = useStore();
+  const sync = useSyncStatus();
   const path = useHashRoute();
   const [form, setForm] = useState(null); // { trade } ; trade = null → nouveau
   const [err, setErr] = useState(null);
 
-  useEffect(() => { init().catch((e) => { console.error(e); setErr(e.message); }); }, []);
+  useEffect(() => { init().then(() => startAutoSync()).catch((e) => { console.error(e); setErr(e.message); }); }, []);
   const openNew = useCallback(() => setForm({ trade: null }), []);
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) && !document.querySelector('dialog[open]')) { e.preventDefault(); openNew(); } };
@@ -60,6 +62,8 @@ export default function App() {
             <h1><small>Mode {MODE_LABELS[mode]} · {state.settings.currency}</small>{route.title}</h1>
             <div className="actions">
               <div className="seg" role="group" aria-label="Mode">{['reel', 'backtest'].map((m) => <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => saveSettings({ mode: m })}>{MODE_LABELS[m]}</button>)}</div>
+              {sync.configured && <a className="syncdot" href="#/settings" title={sync.signedIn ? (sync.status === 'error' ? sync.error : sync.status === 'offline' ? 'Hors ligne' : sync.status === 'syncing' ? 'Synchronisation…' : 'Synchronisé') : 'Non connecté : tes données restent sur cet appareil'}>
+                <i className={sync.signedIn ? sync.status : 'off'} aria-hidden="true" /><span className="sr">{sync.signedIn ? `Synchronisation : ${sync.status}` : 'Non connecté'}</span></a>}
               <button className="btn primary" onClick={openNew}>+ Nouveau trade</button>
             </div>
           </header>

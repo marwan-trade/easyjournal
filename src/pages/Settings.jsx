@@ -8,6 +8,7 @@ import { tradesToRows } from '../core/io/mapping.js';
 import Dialog from '../components/Dialog.jsx';
 import ImportFlow, { prepareImport } from '../components/ImportFlow.jsx';
 import { toast } from '../components/toast.jsx';
+import SyncPanel from '../components/SyncPanel.jsx';
 
 function download(name, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
@@ -29,7 +30,8 @@ export default function Settings({ state }) {
   };
   return (
     <div className="set">
-      <section className="card" style={{ '--i': 0 }}>
+      <SyncPanel />
+      <section className="card" style={{ '--i': 1 }}>
         <h2>Données</h2>
         <p className="sub" style={{ margin: '4px 0 12px' }}>{state.persistent ? 'Tes trades sont enregistrés dans ce navigateur. Fais une sauvegarde régulière.' : 'Attention : stockage permanent indisponible (navigation privée ?). Exporte une sauvegarde.'}</p>
         <div className="row">
@@ -54,7 +56,7 @@ export default function Settings({ state }) {
         <Dialog title="Effacer toutes les données ?" onClose={() => setWipe(false)} footer={<>
           <button className="btn" onClick={() => setWipe(false)}>Annuler</button>
           <button className="btn danger" disabled={confirm.trim() !== 'EFFACER'} onClick={async () => { await wipeAll(); setWipe(false); toast('Toutes les données ont été effacées.'); }}>Tout effacer</button></>}>
-          <p>Tous tes trades, idées et réglages seront supprimés. Action définitive : exporte d'abord une sauvegarde.</p>
+          <p>Tous tes trades, idées et réglages seront supprimés de cet appareil, et aussi de ton compte en ligne si tu es connecté. Action définitive : exporte d'abord une sauvegarde.</p>
           <label className="f" style={{ marginTop: 12 }}>Tape EFFACER pour confirmer<input value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" /></label>
         </Dialog>
       )}

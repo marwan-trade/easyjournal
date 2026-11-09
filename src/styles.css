@@ -122,3 +122,10 @@ h3{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--go
 .totals b{font-family:var(--serif);font-size:1.25rem;font-variant-numeric:tabular-nums}
 tfoot td{border-top:2px solid rgba(245,185,66,.4);border-bottom:0;background:rgba(245,185,66,.05);font-weight:500}
 
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.syncdot{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface)}
+.syncdot i{width:10px;height:10px;border-radius:50%;background:var(--win);box-shadow:0 0 10px rgba(143,191,154,.6)}
+.syncdot i.syncing{background:var(--gold);box-shadow:0 0 10px var(--glow);animation:blink 1s ease-in-out infinite}
+.syncdot i.error,.syncdot i.offline{background:var(--loss);box-shadow:0 0 10px rgba(197,101,94,.6)}
+.syncdot i.off{background:var(--muted);box-shadow:none}
