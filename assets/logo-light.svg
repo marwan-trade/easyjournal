@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="EasyJournal">
-  <style>.t{fill:#fff;stroke:#d5d9e0}.n{fill:#c8102e}.s{fill:#8f0b22}</style>
-  <rect class="t" x="1" y="1" width="62" height="62" rx="14" stroke-width="2"/>
-  <rect class="n" x="14" y="10" width="36" height="44" rx="5"/>
-  <path class="s" d="M14 15a5 5 0 0 1 5-5h1v44h-1a5 5 0 0 1-5-5z"/>
-  <path d="M26 42l7-8 5 5 8-12" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="46" cy="27" r="3" fill="#fff"/>
-</svg>

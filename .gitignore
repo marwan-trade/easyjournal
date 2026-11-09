@@ -1,4 +1,5 @@
 node_modules/
+dist/
 _site/
 .DS_Store
 # Tes données ne doivent JAMAIS être dans le dépôt : exports et sauvegardes restent en local.

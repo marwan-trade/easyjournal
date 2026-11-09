@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeTrade, validateTrade, parseNum, applyResultSign, isValidISODate } from '../js/domain/trade.js';
-import { effectivePnl, rMultiple, pipValueFor, formatMoney } from '../js/domain/money.js';
-import { summarize, maxDrawdown, streaks, sortTrades } from '../js/domain/stats.js';
+import { normalizeTrade, validateTrade, parseNum, applyResultSign, isValidISODate } from '../src/core/domain/trade.js';
+import { effectivePnl, rMultiple, pipValueFor, formatMoney } from '../src/core/domain/money.js';
+import { summarize, maxDrawdown, streaks, sortTrades } from '../src/core/domain/stats.js';
 
 const settings = { currency: 'USD', defaultPipValue: 10, pipValues: { USDJPY: 6.5 } };
 let n = 0;

@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { readXlsx } from '../js/io/xlsx.js';
-import { parseCSV, stringifyCSV } from '../js/io/csv.js';
-import { workbookToTrades, rowsToTrades, tradesToRows, parseDate, parseRR } from '../js/io/mapping.js';
-import { buildBackup, parseBackup } from '../js/io/json.js';
-import { normalizeTrade } from '../js/domain/trade.js';
+import { readXlsx } from '../src/core/io/xlsx.js';
+import { parseCSV, stringifyCSV } from '../src/core/io/csv.js';
+import { workbookToTrades, rowsToTrades, tradesToRows, parseDate, parseRR } from '../src/core/io/mapping.js';
+import { buildBackup, parseBackup } from '../src/core/io/json.js';
+import { normalizeTrade } from '../src/core/domain/trade.js';
 
 const fixture = (name) => readFile(new URL(`./fixtures/${name}`, import.meta.url));
 
