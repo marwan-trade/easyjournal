@@ -5,6 +5,7 @@ import { effectivePnl } from '../core/domain/money.js';
 import { money, signClass, formatNumber, formatPercent, shortDate } from '../format.js';
 import CountUp from '../components/CountUp.jsx';
 import LineChart from '../components/LineChart.jsx';
+import Announcements from '../components/Announcements.jsx';
 import { ResultPill, RateBars, Empty, pipsText } from '../components/shared.jsx';
 
 export default function Dashboard({ state, onNew, onEdit }) {
@@ -69,13 +70,16 @@ export default function Dashboard({ state, onNew, onEdit }) {
         </div>
       </section>
 
-      <section className="card" style={{ '--i': 7 }}>
+      <section className="grid two">
+      <div className="card" style={{ '--i': 7 }}>
         <h2>Derniers trades</h2>
         <div className="tablewrap"><table><thead><tr><th>Date</th><th>Paire</th><th>Scénario</th><th>Résultat</th><th className="num">Pips</th><th className="num">Net</th></tr></thead><tbody>
           {recent.map((t) => { const p = effectivePnl(t, settings); return (
             <tr key={t.id} onClick={() => onEdit(t)}><td>{shortDate(t.date)}</td><td>{t.pair}</td><td>{t.scenario || '—'}</td><td><ResultPill result={t.result} /></td><td className="num">{pipsText(t)}</td>
               <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td></tr>); })}
         </tbody></table></div>
+      </div>
+        <Announcements state={state} />
       </section>
     </>
   );
