@@ -7,7 +7,6 @@ import Dashboard from './pages/Dashboard.jsx';
 import Journal from './pages/Journal.jsx';
 import Analysis from './pages/Analysis.jsx';
 import Ideas from './pages/Ideas.jsx';
-import Calendar from './pages/Calendar.jsx';
 import Settings from './pages/Settings.jsx';
 import { MODE_LABELS } from './core/domain/trade.js';
 
@@ -16,8 +15,7 @@ const ROUTES = [
   { path: '/trades', title: 'Journal', icon: '☰', Page: Journal },
   { path: '/analysis', title: 'Analyse', icon: '▥', Page: Analysis },
   { path: '/ideas', title: 'Idées', icon: '✦', Page: Ideas },
-  { path: '/calendar', title: 'Calendrier', short: 'Calendrier', icon: '◷', Page: Calendar },
-  { path: '/settings', title: 'Réglages', icon: '⚙', Page: Settings, hidden: true },
+  { path: '/settings', title: 'Réglages', icon: '⚙', Page: Settings },
 ];
 
 const useHashRoute = () => {
@@ -53,7 +51,7 @@ export default function App() {
       <div className="app">
         <aside>
           <div className="brand"><Logo size={32} /><span>Easy<b>Journal</b></span></div>
-          <nav className="side" aria-label="Navigation principale">{ROUTES.filter((r) => !r.hidden).map((r) => <a key={r.path} href={`#${r.path}`} className={r === route ? 'on' : ''} aria-current={r === route ? 'page' : undefined}><span aria-hidden="true">{r.icon}</span>{r.title}</a>)}</nav>
+          <nav className="side" aria-label="Navigation principale">{ROUTES.map((r) => <a key={r.path} href={`#${r.path}`} className={r === route ? 'on' : ''} aria-current={r === route ? 'page' : undefined}><span aria-hidden="true">{r.icon}</span>{r.title}</a>)}</nav>
           <div className="hint">Raccourci : <kbd>n</kbd> = nouveau trade</div>
         </aside>
         <main id="main" tabIndex={-1}>
@@ -63,13 +61,12 @@ export default function App() {
             <div className="actions">
               <div className="seg" role="group" aria-label="Mode">{['reel', 'backtest'].map((m) => <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => saveSettings({ mode: m })}>{MODE_LABELS[m]}</button>)}</div>
               <button className="btn primary" onClick={openNew}>+ Nouveau trade</button>
-              <a className={`btn gear ${route.path === '/settings' ? 'on' : ''}`} href="#/settings" aria-label="Réglages" title="Réglages">⚙</a>
             </div>
           </header>
           <Page key={route.path + mode} state={state} onNew={openNew} onEdit={(trade) => setForm({ trade })} />
         </main>
       </div>
-      <nav className="tabbar" aria-label="Navigation mobile">{ROUTES.filter((r) => !r.hidden).map((r) => <a key={r.path} href={`#${r.path}`} className={r === route ? 'on' : ''}><b aria-hidden="true">{r.icon}</b>{r.short ?? r.title}</a>)}</nav>
+      <nav className="tabbar" aria-label="Navigation mobile">{ROUTES.map((r) => <a key={r.path} href={`#${r.path}`} className={r === route ? 'on' : ''}><b aria-hidden="true">{r.icon}</b>{r.short ?? r.title}</a>)}</nav>
       {form && <TradeForm key={form.trade?.id ?? 'new'} trade={form.trade} settings={state.settings} onClose={() => setForm(null)} />}
       <Toasts />
     </>

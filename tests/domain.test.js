@@ -162,38 +162,6 @@ test('summarize expose le total gagné et le total perdu', () => {
   assert.equal(s.money.total, 120);
 });
 
-import { filterEvents, groupByDay, weekRange, currenciesFromPairs, makeEvent, toISOUtc, upcoming } from '../src/core/calendar/events.js';
-import { mapFmpEvent, fetchFmpEvents, CalendarError } from '../src/core/calendar/fmp.js';
-
-const ev = (at, cur, title, impact) => makeEvent({ at, currency: cur, title, impact });
-
-test('calendrier : filtre par impact et par devise, trié par heure', () => {
-  const list = [ev('2026-11-09T14:00:00Z', 'USD', 'B', 'High'), ev('2026-11-09T08:00:00Z', 'EUR', 'A', 'Low'), ev('2026-11-09T10:00:00Z', 'USD', 'C', 'Medium')];
-  assert.deepEqual(filterEvents(list, { impacts: ['high', 'medium'] }).map((e) => e.title), ['C', 'B']);
-  assert.deepEqual(filterEvents(list, { currencies: ['EUR'] }).map((e) => e.title), ['A']);
-  assert.equal(filterEvents(list, { impacts: [] }).length, 0);
-});
-
-test('calendrier : dates sans fuseau lues en UTC, semaine du lundi au dimanche, devises des paires', () => {
-  assert.equal(toISOUtc('2026-11-09 13:30:00'), '2026-11-09T13:30:00.000Z');
-  assert.deepEqual(weekRange(new Date(2026, 10, 11)), { from: '2026-11-09', to: '2026-11-15' }); // mercredi 11 nov. 2026
-  assert.deepEqual(weekRange(new Date(2026, 10, 15), 1), { from: '2026-11-16', to: '2026-11-22' }); // dimanche + 1 semaine
-  assert.deepEqual(currenciesFromPairs(['GBPUSD', 'usdjpy', 'XAUUSD', '']).sort(), ['GBP', 'JPY', 'USD']);
-  assert.equal(groupByDay([ev('2026-11-09T10:00:00Z', 'USD', 'x', 'low')]).length, 1);
-  assert.equal(upcoming([ev('2026-11-09T10:00:00Z', 'USD', 'x', 'high')], new Date('2026-11-09T11:00:00Z')).length, 0);
-});
-
-test('fournisseur FMP : conversion et erreurs lisibles', async () => {
-  const e = mapFmpEvent({ date: '2026-11-06 13:30:00', country: 'US', event: 'Non Farm Payrolls', impact: 'High', estimate: 150, previous: 143, actual: null, currency: 'USD' });
-  assert.equal(e.impact, 'high'); assert.equal(e.forecast, 150); assert.equal(e.currency, 'USD');
-  const fake = (status, body) => async () => ({ status, ok: status < 400, json: async () => body });
-  assert.equal((await fetchFmpEvents({ from: 'a', to: 'b', key: 'k', fetchImpl: fake(200, [{ date: '2026-11-06 13:30:00', event: 'X', impact: 'Low', country: 'GB' }]) })).length, 1);
-  await assert.rejects(fetchFmpEvents({ from: 'a', to: 'b', key: 'k', fetchImpl: fake(403, {}) }), (err) => err instanceof CalendarError && err.code === 'key');
-  await assert.rejects(fetchFmpEvents({ from: 'a', to: 'b', key: 'k', fetchImpl: fake(200, { 'Error Message': 'plan' }) }), (err) => err.code === 'plan');
-  await assert.rejects(fetchFmpEvents({ from: 'a', to: 'b', key: '', fetchImpl: fake(200, []) }), (err) => err.code === 'nokey');
-  await assert.rejects(fetchFmpEvents({ from: 'a', to: 'b', key: 'k', fetchImpl: async () => { throw new TypeError('fail'); } }), (err) => err.code === 'network');
-});
-
 import { pipValueInfo, splitPair, pipSize } from '../src/core/domain/money.js';
 
 test('valeur du pip calculée selon la paire (compte en USD)', () => {

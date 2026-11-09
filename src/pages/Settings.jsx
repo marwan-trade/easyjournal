@@ -8,9 +8,6 @@ import { tradesToRows } from '../core/io/mapping.js';
 import Dialog from '../components/Dialog.jsx';
 import ImportFlow, { prepareImport } from '../components/ImportFlow.jsx';
 import { toast } from '../components/toast.jsx';
-import { getApiKey, setApiKey, clearCache, isDemoCalendar, setDemoCalendar } from '../core/calendar/cache.js';
-import { fetchFmpEvents } from '../core/calendar/fmp.js';
-import { weekRange } from '../core/calendar/events.js';
 import { pipValueInfo, splitPair, rateToAccount, DEFAULT_RATES_USD } from '../core/domain/money.js';
 import { money } from '../format.js';
 
@@ -29,13 +26,6 @@ export default function Settings({ state }) {
   const [confirm, setConfirm] = useState('');
   const pairsList = [...new Set([...s.pairs, ...state.trades.map((t) => t.pair)].filter(Boolean))].sort();
   const quoteCurrencies = [...new Set(pairsList.map((pr) => splitPair(pr)).filter((p) => p && p.base in DEFAULT_RATES_USD && p.quote in DEFAULT_RATES_USD && p.quote !== s.currency).map((p) => p.quote))].sort();
-  const [apiKey, setKey] = useState(getApiKey);
-  const [test, setTest] = useState(null);
-  const runTest = async () => {
-    setTest({ busy: true });
-    try { const { from, to } = weekRange(); const ev = await fetchFmpEvents({ from, to, key: apiKey.trim() }); setTest({ ok: `Connexion réussie : ${ev.length} annonce(s) cette semaine (${ev.filter((e) => e.impact === 'high').length} à fort impact).` }); }
-    catch (e) { setTest({ err: e.message }); }
-  };
   const onFile = async (e) => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;
@@ -60,23 +50,6 @@ export default function Settings({ state }) {
           </div>
           {s.currency !== 'USD' && <p className="banner" style={{ marginTop: 10 }}>Ton compte n'est pas en USD : renseigne les taux ci-dessus pour obtenir un calcul automatique.</p>}
         </>}
-      </section>
-      <section className="card" style={{ '--i': 1 }}>
-        <h2>Calendrier économique</h2>
-        <p className="sub">Pour afficher les annonces (inflation, emploi, taux des banques centrales…) avec leur impact faible, moyen ou très fort.</p>
-        <ol className="sub" style={{ margin: '10px 0 12px 18px', padding: 0 }}>
-          <li>Crée un compte gratuit sur <b>financialmodelingprep.com</b> (sans carte bancaire).</li>
-          <li>Copie ta clé API depuis ton tableau de bord, colle-la ci-dessous, puis clique sur « Tester ».</li>
-          <li>Si le test réussit, ouvre l'onglet Calendrier.</li>
-        </ol>
-        <div className="row">
-          <input type="password" autoComplete="off" spellCheck="false" value={apiKey} onChange={(e) => setKey(e.target.value)} placeholder="Ta clé API" aria-label="Clé API du calendrier" style={{ flex: '1 1 240px' }} />
-          <button className="btn primary" onClick={() => { setApiKey(apiKey); clearCache(); setDemoCalendar(false); toast(apiKey.trim() ? 'Clé enregistrée sur cet appareil.' : 'Clé supprimée.'); }}>Enregistrer</button>
-          <button className="btn" disabled={!apiKey.trim() || test?.busy} onClick={runTest}>Tester</button>
-        </div>
-        {test?.ok && <p className="banner" role="status" style={{ marginTop: 10 }}>{test.ok}</p>}
-        {test?.err && <p className="banner" role="alert" style={{ marginTop: 10 }}>{test.err}</p>}
-        <p className="sub" style={{ marginTop: 10 }}>La clé reste dans ce navigateur : elle n'est jamais envoyée ailleurs que chez le fournisseur et n'apparaît pas dans tes sauvegardes.{isDemoCalendar() ? ' Les exemples fictifs sont actifs.' : ''}</p>
       </section>
       <section className="card" style={{ '--i': 2 }}>
         <h2>Données</h2>
