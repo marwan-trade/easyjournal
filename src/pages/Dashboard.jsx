@@ -13,7 +13,7 @@ export default function Dashboard({ state, onNew, onEdit }) {
   const cap = settings.initialCapital[settings.mode] || 0;
   const s = summarize(trades, settings, cap); // calcul léger : recalculé à chaque changement de l'état
   const [chosen, setChosen] = useState(null);
-  if (trades.length === 0) return <Empty title="Ton journal est vide" text="Ajoute ton premier trade ou importe ton Excel depuis les réglages." action="Ajouter un trade" onAction={onNew} />;
+  if (trades.length === 0) return <Empty title="Ton journal est vide" text="Ajoute ton premier trade ou importe ton Excel depuis les réglages." action="Ajouter un trade" onAction={onNew} demo />;
 
   // Courbe par défaut : la première qui a assez de points (argent, puis pips, puis +1/−1).
   const tab = chosen ?? ['money', 'pips', 'outcome'].find((k) => s.curves[k === 'money' ? 'equity' : k].length > 1) ?? 'outcome';
@@ -36,6 +36,12 @@ export default function Dashboard({ state, onNew, onEdit }) {
         <div className="card" style={{ '--i': 1 }}><div className="k">Réussite</div>
           <div className="v">{s.winRate === null ? '—' : <CountUp value={s.winRate * 100} format={(v) => `${v.toFixed(1).replace('.', ',')} %`} />}</div>
           <div className="sub">{s.wins} gagnants · {s.losses} perdants</div></div>
+        <div className="card" style={{ '--i': 2 }}><div className="k">Total gagné</div>
+          <div className="v win">{s.money.total === null ? '—' : <CountUp value={s.money.grossWin} format={(v) => money(v, settings, { sign: true, digits: 2 })} />}</div>
+          <div className="sub">{s.wins} trade(s) gagnant(s)</div></div>
+        <div className="card" style={{ '--i': 2 }}><div className="k">Total perdu</div>
+          <div className="v loss">{s.money.total === null ? '—' : <CountUp value={-s.money.grossLoss} format={(v) => money(v, settings, { sign: true, digits: 2 })} />}</div>
+          <div className="sub">{s.losses} trade(s) perdant(s)</div></div>
         <div className="card" style={{ '--i': 2 }}><div className="k">Profit factor</div>
           <div className="v">{s.money.profitFactor === null ? '—' : s.money.profitFactor === Infinity ? '∞' : <CountUp value={s.money.profitFactor} format={fmtInt} />}</div>
           <div className="sub">gains ÷ pertes</div></div>

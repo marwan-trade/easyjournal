@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { saveSettings, wipeAll } from '../store.js';
+import { saveSettings, wipeAll, deleteTradesWhere } from '../store.js';
+import { isDemo } from '../core/demo.js';
+import { loadDemoData } from '../components/shared.jsx';
 import { buildBackup } from '../core/io/json.js';
 import { stringifyCSV } from '../core/io/csv.js';
 import { tradesToRows } from '../core/io/mapping.js';
@@ -30,16 +32,17 @@ export default function Settings({ state }) {
     <div className="set">
       <section className="card" style={{ '--i': 0 }}>
         <h2>Compte et calculs</h2>
+        <p className="sub">Ces réglages servent aux chiffres de ton tableau de bord. Rien n'est obligatoire : tu peux les laisser tels quels.</p>
         <div className="formgrid" style={{ marginTop: 10 }}>
-          <label className="f">Devise<input defaultValue={s.currency} onBlur={(e) => saveSettings({ currency: e.target.value.trim().toUpperCase() || 'USD' })} /></label>
-          <label className="f">Capital de départ · Réel<input inputMode="decimal" defaultValue={s.initialCapital.reel} onBlur={(e) => saveSettings({ initialCapital: { ...s.initialCapital, reel: num(e.target.value) } })} /></label>
-          <label className="f">Capital de départ · Backtest<input inputMode="decimal" defaultValue={s.initialCapital.backtest} onBlur={(e) => saveSettings({ initialCapital: { ...s.initialCapital, backtest: num(e.target.value) } })} /></label>
-          <label className="f">Valeur d'un pip (1 lot)<input inputMode="decimal" defaultValue={s.defaultPipValue} onBlur={(e) => saveSettings({ defaultPipValue: num(e.target.value) || 10 })} /></label>
+          <label className="f">Devise du compte<input defaultValue={s.currency} onBlur={(e) => saveSettings({ currency: e.target.value.trim().toUpperCase() || 'USD' })} /></label>
+          <label className="f">Capital de départ · Réel (argent de départ du compte réel)<input inputMode="decimal" defaultValue={s.initialCapital.reel} onBlur={(e) => saveSettings({ initialCapital: { ...s.initialCapital, reel: num(e.target.value) } })} /></label>
+          <label className="f">Capital de départ · Backtest (capital fictif)<input inputMode="decimal" defaultValue={s.initialCapital.backtest} onBlur={(e) => saveSettings({ initialCapital: { ...s.initialCapital, backtest: num(e.target.value) } })} /></label>
+          <label className="f">Valeur d'un pip pour 1 lot<input inputMode="decimal" defaultValue={s.defaultPipValue} onBlur={(e) => saveSettings({ defaultPipValue: num(e.target.value) || 10 })} /></label>
         </div>
-        <p className="sub" style={{ marginTop: 8 }}>La valeur du pip sert uniquement à estimer le résultat quand tu ne saisis pas le montant réel du courtier.</p>
+        <p className="sub" style={{ marginTop: 8 }}><b>Capital de départ</b> : la courbe d'argent part de ce montant et le drawdown en % se calcule dessus. <b>Valeur du pip</b> : sert seulement à estimer le gain ou la perte (pips × lots × valeur du pip) quand tu ne saisis pas le montant réel de ton courtier.</p>
       </section>
       <section className="card" style={{ '--i': 1 }}>
-        <h2>Listes de suggestions</h2><p className="sub">Une valeur par ligne ou séparées par des virgules.</p>
+        <h2>Listes de suggestions</h2><p className="sub">Ce sont les choix proposés quand tu remplis un trade (paires, scénarios, confirmations). Une valeur par ligne.</p>
         <div className="formgrid" style={{ marginTop: 10 }}>
           {[['pairs', 'Paires'], ['scenarios', 'Scénarios'], ['timeframes', 'Confirmations']].map(([k, l]) => (
             <label className="f" key={k}>{l}<textarea defaultValue={s[k].join('\n')} onBlur={(e) => saveSettings({ [k]: list(e.target.value) })} /></label>
@@ -52,6 +55,12 @@ export default function Settings({ state }) {
         <div className="row">
           <button className="btn primary" onClick={async () => { download(`easyjournal-sauvegarde-${day()}.json`, JSON.stringify(buildBackup({ trades: state.trades, ideas: state.ideas, settings: s }), null, 2), 'application/json'); await saveSettings({ lastBackupAt: Date.now() }); toast('Sauvegarde téléchargée.'); }}>Sauvegarde complète (JSON)</button>
           <button className="btn" onClick={() => { download(`easyjournal-trades-${day()}.csv`, stringifyCSV(tradesToRows([...state.trades].sort((a, b) => (a.date < b.date ? -1 : 1)), s.customFields)), 'text/csv'); toast('CSV téléchargé.'); }}>Tous les trades (CSV)</button>
+        </div>
+        <h3>Données de démonstration</h3>
+        <p className="sub" style={{ marginBottom: 8 }}>60 trades fictifs (42 en backtest, 18 en réel) pour voir l'application remplie. Ils sont repérés et se suppriment sans toucher à tes vrais trades.</p>
+        <div className="row">
+          <button className="btn primary" onClick={loadDemoData}>Charger les données de démo</button>
+          <button className="btn danger" disabled={!state.trades.some(isDemo)} onClick={async () => { const n = await deleteTradesWhere(isDemo); toast(`${n} trade(s) fictif(s) supprimé(s).`); }}>Supprimer les données de démo ({state.trades.filter(isDemo).length})</button>
         </div>
         <h3>Importer</h3>
         <p className="sub" style={{ marginBottom: 8 }}>Journal Excel (.xlsx avec feuilles « Backtesting » et « Réel »), CSV ou sauvegarde JSON. Un aperçu s'affiche avant toute modification.</p>

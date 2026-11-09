@@ -171,6 +171,8 @@ export function summarize(trades, settings, initialCapital = 0) {
 
     money: {
       total: moneyList.length ? sum(moneyList.map((x) => x.p.value)) : null,
+      grossWin,
+      grossLoss, // positif : somme des pertes en valeur absolue
       estimatedCount: moneyList.filter((x) => x.p.estimated).length,
       profitFactor: moneyList.length === 0 ? null : grossLoss === 0 ? (grossWin > 0 ? Infinity : null) : grossWin / grossLoss,
       expectancy: moneyList.length ? mean(moneyList.map((x) => x.p.value)) : null,

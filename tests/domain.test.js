@@ -153,3 +153,11 @@ test('par jour de semaine : lundi en premier', () => {
   const labels = summarize(trades, settings).byWeekday.map((g) => g.label);
   assert.deepEqual(labels, ['Lundi', 'Dimanche']);
 });
+
+test('summarize expose le total gagné et le total perdu', () => {
+  const t = (result, pnl) => normalizeTrade({ date: '2026-01-05', pair: 'EURUSD', result, pnl });
+  const s = summarize([t('Gagnant', 100), t('Gagnant', 50), t('Perdant', 30)], { defaultPipValue: 10, pipValues: {} });
+  assert.equal(s.money.grossWin, 150);
+  assert.equal(s.money.grossLoss, 30);
+  assert.equal(s.money.total, 120);
+});

@@ -83,7 +83,7 @@ tbody tr{cursor:pointer}tbody tr:hover td{background:rgba(245,185,66,.05)}
 .pill.w{background:rgba(143,191,154,.14);color:var(--win)}.pill.l{background:rgba(197,101,94,.15);color:var(--loss)}.pill.e{background:rgba(163,154,141,.15);color:var(--muted)}
 .pill.o{background:rgba(245,185,66,.14);color:var(--gold)}
 .pill.o::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:6px;animation:blink 1.6s ease-in-out infinite;box-shadow:0 0 8px var(--gold)}
-.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;margin-bottom:14px}
 input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;width:100%;transition:border-color .2s,box-shadow .2s}
 input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,185,66,.15);outline:none}
 textarea{min-height:84px;resize:vertical}
@@ -116,3 +116,8 @@ dialog[open]{animation:pop .3s cubic-bezier(.2,.8,.2,1)}
 h3{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:18px 0 8px;font-weight:500}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.card,.area{opacity:1;transform:none}}
 @media(max-width:480px){.filters{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr 1fr}.bar{grid-template-columns:78px 1fr 44px}.v{font-size:1.6rem}}
+
+.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px}
+.totals>div{background:rgba(245,185,66,.05);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:2px}
+.totals b{font-family:var(--serif);font-size:1.25rem;font-variant-numeric:tabular-nums}
+tfoot td{border-top:2px solid rgba(245,185,66,.4);border-bottom:0;background:rgba(245,185,66,.05);font-weight:500}

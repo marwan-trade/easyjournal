@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { tradesOf } from '../store.js';
 import { effectivePnl } from '../core/domain/money.js';
-import { money, signClass, shortDate } from '../format.js';
+import { summarize } from '../core/domain/stats.js';
+import { money, signClass, shortDate, formatNumber } from '../format.js';
 import { ResultPill, Empty, pipsText } from '../components/shared.jsx';
 
 const EMPTY = { q: '', pair: '', scenario: '', result: '', from: '', to: '' };
@@ -20,7 +21,10 @@ export default function Journal({ state, onNew, onEdit }) {
     && (!q || `${t.notes} ${t.tags.join(' ')} ${t.pair} ${t.timeframe} ${t.scenario}`.toLowerCase().includes(q)))
     .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1));
 
-  if (all.length === 0) return <Empty title="Ton journal est vide" text="Ajoute un trade, ou importe ton Excel depuis les réglages." action="Ajouter un trade" onAction={onNew} />;
+  const sum = summarize(rows, settings);
+  const lots = rows.reduce((a, t) => a + (t.lots ?? 0), 0);
+
+  if (all.length === 0) return <Empty title="Ton journal est vide" text="Ajoute un trade, ou importe ton Excel depuis les réglages." action="Ajouter un trade" onAction={onNew} demo />;
   return (
     <div className="card" style={{ '--i': 0 }}>
       <div className="filters">
@@ -31,7 +35,15 @@ export default function Journal({ state, onNew, onEdit }) {
         <input type="date" aria-label="Du" value={f.from} onChange={set('from')} />
         <input type="date" aria-label="Au" value={f.to} onChange={set('to')} />
       </div>
-      <p className="muted" aria-live="polite">{rows.length} trade(s) affiché(s) sur {all.length}</p>
+      <div className="totals" aria-label="Totaux des trades affichés">
+        <div><span className="k">Gagnants</span><b className="win">{sum.wins}</b></div>
+        <div><span className="k">Perdants</span><b className="loss">{sum.losses}</b></div>
+        <div><span className="k">Total gagné</span><b className="win">{money(sum.money.grossWin, settings, { sign: true })}</b></div>
+        <div><span className="k">Total perdu</span><b className="loss">{money(-sum.money.grossLoss, settings, { sign: true })}</b></div>
+        <div><span className="k">Net</span><b className={signClass(sum.money.total)}>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></div>
+        <div><span className="k">Pips</span><b className={signClass(sum.pips.total)}>{formatNumber(sum.pips.total, { sign: true })}</b></div>
+      </div>
+      <p className="muted" aria-live="polite">{rows.length} trade(s) affiché(s) sur {all.length}{sum.open ? ` · ${sum.open} en cours` : ''}{sum.money.estimatedCount ? ` · ${sum.money.estimatedCount} montant(s) estimé(s) ≈` : ''}</p>
       {rows.length === 0 ? <p className="muted" style={{ padding: '16px 0' }}>Aucun trade ne correspond à ces filtres. <button className="btn" onClick={() => setF(EMPTY)}>Réinitialiser</button></p> : (
         <div className="tablewrap"><table><thead><tr><th>Date</th><th>Paire</th><th>Sens</th><th>Scénario</th><th>Confirmation</th><th>Résultat</th><th className="num">Lots</th><th className="num">Pips</th><th className="num">Net</th></tr></thead><tbody>
           {rows.map((t) => { const p = effectivePnl(t, settings); return (
@@ -39,7 +51,14 @@ export default function Journal({ state, onNew, onEdit }) {
               <td>{shortDate(t.date)}</td><td>{t.pair}</td><td>{t.side || '—'}</td><td>{t.scenario || '—'}</td><td>{t.timeframe || '—'}</td>
               <td><ResultPill result={t.result} /></td><td className="num">{t.lots ?? '—'}</td><td className="num">{pipsText(t)}</td>
               <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td></tr>); })}
-        </tbody></table></div>
+        </tbody>
+          <tfoot><tr>
+            <td colSpan={5}><b>Total · {rows.length} trade(s)</b></td>
+            <td><span className="win">{sum.wins} G</span> · <span className="loss">{sum.losses} P</span></td>
+            <td className="num">{formatNumber(lots, { digits: 2 })}</td>
+            <td className={`num ${signClass(sum.pips.total)}`}>{formatNumber(sum.pips.total, { sign: true })}</td>
+            <td className={`num ${signClass(sum.money.total)}`}><b>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td>
+          </tr></tfoot></table></div>
       )}
     </div>
   );

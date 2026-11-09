@@ -103,6 +103,24 @@ export async function importTrades(incoming, strategy = 'append') {
   return { added: toAdd.length, ignored: incoming.length - toAdd.length };
 }
 
+/** Ajoute des trades tels quels (identifiants conservés) : données de démonstration. */
+export async function addTradesRaw(trades) {
+  const fresh = trades.filter((t) => !state.trades.some((x) => x.id === t.id));
+  await db.bulkPut('trades', fresh);
+  state.trades.push(...fresh);
+  emit();
+  return fresh.length;
+}
+
+/** Supprime les trades dont l'identifiant satisfait `pred` (utilisé pour les données de démo). */
+export async function deleteTradesWhere(pred) {
+  const gone = state.trades.filter(pred);
+  await Promise.all(gone.map((t) => db.delete('trades', t.id)));
+  state.trades = state.trades.filter((t) => !pred(t));
+  emit();
+  return gone.length;
+}
+
 /** Restauration complète depuis une sauvegarde JSON : remplace tout. */
 export async function restoreBackup({ trades, ideas, settings }) {
   await Promise.all([db.clear('trades'), db.clear('ideas')]);
