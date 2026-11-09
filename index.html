@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>EasyJournal</title>
+  <meta name="description" content="EasyJournal : ton journal de trading personnel. Tes données restent dans ton navigateur.">
+  <meta name="theme-color" content="#1f4e8c">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <noscript><style>.app { display: none }</style></noscript>
+</head>
+<body>
+  <a class="skip" href="#main">Aller au contenu</a>
+  <noscript><p style="padding:24px;font-family:sans-serif">EasyJournal a besoin de JavaScript pour fonctionner.</p></noscript>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><img src="assets/logo.svg" alt="" width="30" height="30"><span>EasyJournal</span></div>
+      <nav id="nav" class="nav" aria-label="Navigation principale"></nav>
+      <div class="sidebar-foot"><span class="muted" style="font-size:.8rem;padding:0 10px">Raccourci : <kbd>n</kbd> = nouveau trade</span></div>
+    </aside>
+
+    <div class="main-col">
+      <header class="topbar">
+        <h1 id="page-title">EasyJournal</h1>
+        <div class="topbar-actions">
+          <div id="mode-host"></div>
+          <button id="add-trade" class="btn primary" type="button" aria-label="Nouveau trade"><span aria-hidden="true">+</span><span><span class="btn-long">Nouveau </span>trade</span></button>
+        </div>
+      </header>
+      <main id="main" tabindex="-1"></main>
+    </div>
+
+    <nav id="tabbar" class="tabbar" aria-label="Navigation mobile"></nav>
+  </div>
+
+  <div id="toasts" aria-live="polite"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

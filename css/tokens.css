@@ -1,0 +1,74 @@
+/* Jetons de design : toutes les couleurs et mesures passent par ces variables.
+   Thème clair par défaut, sombre selon l'appareil, ou forcé via data-theme. */
+:root {
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-2: #eef2f7;
+  --border: #dfe5ee;
+  --text: #18222f;
+  --muted: #586578;
+  --brand: #1f4e8c;
+  --brand-soft: #e4edf9;
+  --brand-contrast: #ffffff;
+  --win: #17744c;
+  --win-soft: #e1f3ea;
+  --loss: #b83227;
+  --loss-soft: #fbe7e4;
+  --warn: #8a5a00;
+  --warn-soft: #fff3d6;
+  --focus: #2f6fed;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 4px 14px rgba(16, 24, 40, 0.05);
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --gap: 16px;
+  --sidebar: 232px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d131a;
+    --surface: #151d27;
+    --surface-2: #1b2531;
+    --border: #263241;
+    --text: #e7eef6;
+    --muted: #97a8bc;
+    --brand: #6aa5ff;
+    --brand-soft: #1b2a40;
+    --brand-contrast: #0d131a;
+    --win: #3ecf8e;
+    --win-soft: #13291f;
+    --loss: #ff7a6e;
+    --loss-soft: #321a18;
+    --warn: #f2b84b;
+    --warn-soft: #2f2410;
+    --focus: #8ab6ff;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0d131a;
+  --surface: #151d27;
+  --surface-2: #1b2531;
+  --border: #263241;
+  --text: #e7eef6;
+  --muted: #97a8bc;
+  --brand: #6aa5ff;
+  --brand-soft: #1b2a40;
+  --brand-contrast: #0d131a;
+  --win: #3ecf8e;
+  --win-soft: #13291f;
+  --loss: #ff7a6e;
+  --loss-soft: #321a18;
+  --warn: #f2b84b;
+  --warn-soft: #2f2410;
+  --focus: #8ab6ff;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}

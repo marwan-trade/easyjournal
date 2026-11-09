@@ -1,0 +1,10 @@
+node_modules/
+_site/
+.DS_Store
+# Tes données ne doivent JAMAIS être dans le dépôt : exports et sauvegardes restent en local.
+*.xlsx
+!tests/fixtures/sample.xlsx
+!tests/fixtures/sample_lo.xlsx
+easyjournal-sauvegarde-*.json
+easyjournal-trades-*.csv
+easyjournal-*.csv
