@@ -8,6 +8,7 @@ import Journal from './pages/Journal.jsx';
 import Analysis from './pages/Analysis.jsx';
 import Ideas from './pages/Ideas.jsx';
 import Settings from './pages/Settings.jsx';
+import AuthPage from './components/AuthPage.jsx';
 import { startAutoSync, useSyncStatus } from './sync.js';
 import { MODE_LABELS } from './core/domain/trade.js';
 
@@ -32,6 +33,8 @@ export default function App() {
   const path = useHashRoute();
   const [form, setForm] = useState(null); // { trade } ; trade = null → nouveau
   const [err, setErr] = useState(null);
+  const [guest, setGuest] = useState(() => { try { return localStorage.getItem('easyjournal.guest') === '1'; } catch { return false; } });
+  const continueAsGuest = () => { try { localStorage.setItem('easyjournal.guest', '1'); } catch { /* ignoré */ } setGuest(true); };
 
   useEffect(() => { init().then(() => startAutoSync()).catch((e) => { console.error(e); setErr(e.message); }); }, []);
   const openNew = useCallback(() => setForm({ trade: null }), []);
@@ -44,6 +47,7 @@ export default function App() {
   const { Page } = route;
   if (err) return <main style={{ padding: 24 }}><h1>Erreur de chargement</h1><p>{err}</p></main>;
   if (!state.ready) return null;
+  if (sync.configured && !sync.signedIn && !guest) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><AuthPage onGuest={continueAsGuest} /><Toasts /></>;
   const mode = state.settings.mode;
 
   return (
