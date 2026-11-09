@@ -20,7 +20,6 @@ function download(name, content, type) {
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 const num = (v) => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : 0; };
-const list = (v) => v.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
 const day = () => new Date().toISOString().slice(0, 10);
 
 export default function Settings({ state }) {
@@ -45,17 +44,6 @@ export default function Settings({ state }) {
   return (
     <div className="set">
       <section className="card" style={{ '--i': 0 }}>
-        <h2>Compte et calculs</h2>
-        <p className="sub">Ces réglages servent aux chiffres de ton tableau de bord. Rien n'est obligatoire : tu peux les laisser tels quels.</p>
-        <div className="formgrid" style={{ marginTop: 10 }}>
-          <label className="f">Devise du compte<input defaultValue={s.currency} onBlur={(e) => saveSettings({ currency: e.target.value.trim().toUpperCase() || 'USD' })} /></label>
-          <label className="f">Capital de départ · Réel (argent de départ du compte réel)<input inputMode="decimal" defaultValue={s.initialCapital.reel} onBlur={(e) => saveSettings({ initialCapital: { ...s.initialCapital, reel: num(e.target.value) } })} /></label>
-          <label className="f">Capital de départ · Backtest (capital fictif)<input inputMode="decimal" defaultValue={s.initialCapital.backtest} onBlur={(e) => saveSettings({ initialCapital: { ...s.initialCapital, backtest: num(e.target.value) } })} /></label>
-          <label className="f">Valeur du pip par défaut (or, indices…)<input inputMode="decimal" defaultValue={s.defaultPipValue} onBlur={(e) => saveSettings({ defaultPipValue: num(e.target.value) || 10 })} /></label>
-        </div>
-        <p className="sub" style={{ marginTop: 8 }}><b>Capital de départ</b> : la courbe d'argent part de ce montant et le drawdown en % se calcule dessus.</p>
-      </section>
-      <section className="card" style={{ '--i': 1 }}>
         <h2>Valeur du pip et calcul de l'argent</h2>
         <p className="sub">Tu saisis les <b>pips</b> et les <b>lots</b> d'un trade : EasyJournal calcule l'argent d'après la devise de la paire (pips × lots × valeur du pip). Si tu saisis le résultat réel de ton courtier, il passe avant le calcul.</p>
         <div className="tablewrap"><table><thead><tr><th>Paire</th><th className="num">1 pip pour 1 lot</th><th>Origine</th><th>Forcer une valeur</th></tr></thead><tbody>
@@ -91,14 +79,6 @@ export default function Settings({ state }) {
         <p className="sub" style={{ marginTop: 10 }}>La clé reste dans ce navigateur : elle n'est jamais envoyée ailleurs que chez le fournisseur et n'apparaît pas dans tes sauvegardes.{isDemoCalendar() ? ' Les exemples fictifs sont actifs.' : ''}</p>
       </section>
       <section className="card" style={{ '--i': 2 }}>
-        <h2>Choix proposés dans le formulaire</h2><p className="sub">Quand tu ajoutes un trade, les champs Paire, Scénario et Confirmation te proposent ces valeurs en liste, pour ne pas les retaper. Une valeur par ligne ; tu peux toujours en taper une autre, elle sera ajoutée ici automatiquement.</p>
-        <div className="formgrid" style={{ marginTop: 10 }}>
-          {[['pairs', 'Paires'], ['scenarios', 'Scénarios'], ['timeframes', 'Confirmations']].map(([k, l]) => (
-            <label className="f" key={k}>{l}<textarea defaultValue={s[k].join('\n')} onBlur={(e) => saveSettings({ [k]: list(e.target.value) })} /></label>
-          ))}
-        </div>
-      </section>
-      <section className="card" style={{ '--i': 3 }}>
         <h2>Données</h2>
         <p className="sub" style={{ margin: '4px 0 12px' }}>{state.persistent ? 'Tes trades sont enregistrés dans ce navigateur. Fais une sauvegarde régulière.' : 'Attention : stockage permanent indisponible (navigation privée ?). Exporte une sauvegarde.'}</p>
         <div className="row">
