@@ -4,6 +4,6 @@
  * Ne mets JAMAIS ici la clé « service_role ».
  */
 export const SUPABASE = {
-  url: '',
-  key: '',
+  url: 'https://fvvweegkjesutvidlugv.supabase.co',
+  key: 'sb_publishable_Y1Fb6WEAjDBXQyV9kNf1kA_lr6KO8LQ',
 };
