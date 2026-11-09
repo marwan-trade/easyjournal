@@ -113,9 +113,9 @@ table.data td.r, table.data th.r { text-align: right; }
 .chart text { fill: var(--muted); font-size: 11px; font-family: var(--font); }
 .chart .grid { stroke: var(--border); stroke-width: 1; }
 .chart .axis0 { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
-.chart .line { fill: none; stroke: var(--brand); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
-.chart .area { fill: var(--brand); opacity: 0.1; }
-.chart .dot { fill: var(--surface); stroke: var(--brand); stroke-width: 2; }
+.chart .line { fill: none; stroke: var(--chart-line); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+.chart .area { fill: var(--chart-line); opacity: 0.07; }
+.chart .dot { fill: var(--surface); stroke: var(--chart-line); stroke-width: 2; }
 .chart .bar-win { fill: var(--win); }
 .chart .bar-loss { fill: var(--loss); }
 .chart .bar-label { fill: #fff; font-weight: 700; font-size: 12px; }
