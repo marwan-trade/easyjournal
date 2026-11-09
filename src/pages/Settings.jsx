@@ -8,8 +8,6 @@ import { tradesToRows } from '../core/io/mapping.js';
 import Dialog from '../components/Dialog.jsx';
 import ImportFlow, { prepareImport } from '../components/ImportFlow.jsx';
 import { toast } from '../components/toast.jsx';
-import { pipValueInfo, splitPair, rateToAccount, DEFAULT_RATES_USD } from '../core/domain/money.js';
-import { money } from '../format.js';
 
 function download(name, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
@@ -24,8 +22,6 @@ export default function Settings({ state }) {
   const [prepared, setPrepared] = useState(null);
   const [wipe, setWipe] = useState(false);
   const [confirm, setConfirm] = useState('');
-  const pairsList = [...new Set([...s.pairs, ...state.trades.map((t) => t.pair)].filter(Boolean))].sort();
-  const quoteCurrencies = [...new Set(pairsList.map((pr) => splitPair(pr)).filter((p) => p && p.base in DEFAULT_RATES_USD && p.quote in DEFAULT_RATES_USD && p.quote !== s.currency).map((p) => p.quote))].sort();
   const onFile = async (e) => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;
@@ -34,24 +30,6 @@ export default function Settings({ state }) {
   return (
     <div className="set">
       <section className="card" style={{ '--i': 0 }}>
-        <h2>Valeur du pip et calcul de l'argent</h2>
-        <p className="sub">Tu saisis les <b>pips</b> et les <b>lots</b> d'un trade : EasyJournal calcule l'argent d'après la devise de la paire (pips × lots × valeur du pip). Si tu saisis le résultat réel de ton courtier, il passe avant le calcul.</p>
-        <div className="tablewrap"><table><thead><tr><th>Paire</th><th className="num">1 pip pour 1 lot</th><th>Origine</th><th>Forcer une valeur</th></tr></thead><tbody>
-          {pairsList.map((pr) => { const info = pipValueInfo(pr, s); return (
-            <tr key={pr} style={{ cursor: 'default' }}><td><b>{pr}</b></td><td className="num">{money(info.value, s, { digits: 2 })}</td><td>{info.source}</td>
-              <td><input inputMode="decimal" style={{ width: 110 }} defaultValue={s.pipValues[pr] ?? ''} placeholder="auto" aria-label={`Valeur du pip forcée pour ${pr}`} onBlur={(e) => { const v = num(e.target.value); const next = { ...s.pipValues }; if (v > 0) next[pr] = v; else delete next[pr]; saveSettings({ pipValues: next }); }} /></td></tr>); })}
-        </tbody></table></div>
-        {quoteCurrencies.length > 0 && <>
-          <h3>Taux de conversion</h3>
-          <p className="sub" style={{ marginBottom: 8 }}>Quand une paire n'est pas cotée dans la devise de ton compte ({s.currency}), il faut convertir. Ces taux sont <b>indicatifs</b> : ajuste-les (valeur de 1 unité en {s.currency}) pour plus de précision.</p>
-          <div className="formgrid">
-            {quoteCurrencies.map((c) => { const r = rateToAccount(c, s); return (
-              <label className="f" key={c}>1 {c} = ? {s.currency}<input inputMode="decimal" defaultValue={s.conversionRates[c] ?? ''} placeholder={r ? String(r) : 'à renseigner'} onBlur={(e) => { const v = num(e.target.value); const next = { ...s.conversionRates }; if (v > 0) next[c] = v; else delete next[c]; saveSettings({ conversionRates: next }); }} /></label>); })}
-          </div>
-          {s.currency !== 'USD' && <p className="banner" style={{ marginTop: 10 }}>Ton compte n'est pas en USD : renseigne les taux ci-dessus pour obtenir un calcul automatique.</p>}
-        </>}
-      </section>
-      <section className="card" style={{ '--i': 2 }}>
         <h2>Données</h2>
         <p className="sub" style={{ margin: '4px 0 12px' }}>{state.persistent ? 'Tes trades sont enregistrés dans ce navigateur. Fais une sauvegarde régulière.' : 'Attention : stockage permanent indisponible (navigation privée ?). Exporte une sauvegarde.'}</p>
         <div className="row">
