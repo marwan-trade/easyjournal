@@ -175,3 +175,23 @@ tfoot td{border-top:2px solid rgba(245,185,66,.4);border-bottom:0;background:rgb
 .sent h2{margin:0}.sent p{color:var(--muted);margin:0}
 @media(max-width:900px){.auth{grid-template-columns:minmax(0,1fr);align-items:start;padding:20px 16px 32px}.auth{gap:18px}.auth-hero{display:contents}.auth-hero>.brand{order:0}.auth-hero>h1{order:1}.auth-card{order:2;max-width:none}.auth-hero>.lead{order:3}.auth-hero>.features{order:4}.features{grid-template-columns:minmax(0,1fr)}.herochart{display:none}.auth-hero h1{font-size:1.8rem}}
 @keyframes arise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* ===== Captures d'écran ===== */
+.shotcell{width:42px;text-align:center}
+.shotbtn{border:1px solid var(--line);background:rgba(245,185,66,.08);color:var(--gold);border-radius:8px;width:30px;height:28px;cursor:pointer;transition:transform .2s,box-shadow .3s,border-color .2s}
+.shotbtn:hover{transform:translateY(-1px);border-color:var(--gold);box-shadow:0 0 14px var(--glow)}
+.viewer{position:fixed;inset:0;z-index:100;background:rgba(6,5,4,.92);backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px;animation:arise .25s both}
+.viewer figure{margin:0;display:grid;gap:10px;max-width:min(1500px,100%);max-height:100%;grid-template-rows:auto minmax(0,1fr) auto}
+.viewer figcaption{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--text)}
+.viewer figcaption small{flex-basis:100%;color:var(--muted);max-height:3.2em;overflow:auto}
+.viewer img{max-width:100%;max-height:calc(100vh - 170px);object-fit:contain;border-radius:12px;border:1px solid rgba(245,185,66,.35);box-shadow:0 20px 70px rgba(0,0,0,.7);justify-self:center;min-height:0}
+.vbar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+.shot{display:grid;gap:8px;padding:12px;border:1px dashed var(--line);border-radius:14px;transition:border-color .25s,background .25s}
+.shot.over{border-color:var(--gold);background:rgba(245,185,66,.07)}
+.shot .lbl{font-size:.82rem;color:var(--muted)}
+.drop{display:grid;gap:4px;padding:18px;border:0;background:rgba(245,185,66,.05);border-radius:12px;cursor:pointer;text-align:center}
+.drop small{color:var(--muted)}
+.drop:hover{background:rgba(245,185,66,.1)}
+.shotprev{display:grid;gap:8px}
+.shotprev>button{border:0;padding:0;background:none;cursor:zoom-in;justify-self:start}
+.shotprev img{display:block;max-width:100%;max-height:200px;border-radius:10px;border:1px solid var(--line)}

@@ -115,3 +115,24 @@ test('sauvegarde JSON : aller-retour et rejet des fichiers étrangers', () => {
   assert.throws(() => parseBackup('pas du json'), /JSON/);
   assert.throws(() => parseBackup(JSON.stringify({ format: 'easyjournal-backup', version: 99 })), /plus récente/);
 });
+
+test('xlsx : images rattachées à la bonne ligne (même si elles débordent sur l\'en-tête)', async () => {
+  const sheets = await readXlsx(await fixture('sample_images.xlsx'));
+  const imgs = sheets[0].images;
+  assert.deepEqual(imgs.map((i) => i.row), [2, 3]);
+  assert.equal(imgs[0].mime, 'image/png');
+  const res = workbookToTrades(sheets);
+  assert.equal(res.trades.length, 3);
+  assert.equal(res.images.length, 3);
+  assert.ok(res.images[0] && res.images[1]);
+  assert.equal(res.images[2], null);
+  assert.equal(res.images[0].bytes[1], 0x50); // « P » de PNG
+});
+
+test('RR saisi « 1:2 » ou « 1:1.5 » devenu une heure dans Excel : retrouvé', async () => {
+  const res = workbookToTrades(await readXlsx(await fixture('sample_images.xlsx')));
+  assert.deepEqual(res.trades.map((t) => t.rr), [1, 1.5, 0.5]); // 0.5 reste un vrai RR
+  assert.equal(parseRR(0.043055555555555555), 2);
+  assert.equal(parseRR('1:3'), 3);
+  assert.equal(parseRR(2), 2);
+});

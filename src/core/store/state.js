@@ -94,19 +94,27 @@ export async function deleteTrade(id) {
 export async function importTrades(incoming, strategy = 'append') {
   const modes = new Set(incoming.map((t) => t.mode));
   let toAdd = incoming.map((t) => normalizeTrade({ ...t, id: newId() }));
+  let attached = 0;
   if (strategy === 'replace') {
     const removed = state.trades.filter((t) => modes.has(t.mode));
     await Promise.all(removed.map((t) => db.delete('trades', t.id)));
     await tombstone('trades', removed.map((t) => t.id));
     state.trades = state.trades.filter((t) => !modes.has(t.mode));
   } else {
-    const seen = new Set(state.trades.map(dedupeKey));
+    const existing = new Map(state.trades.map((t) => [dedupeKey(t), t]));
+    const attach = [];
     toAdd = toAdd.filter((t) => {
       const k = dedupeKey(t);
-      if (seen.has(k)) return false;
-      seen.add(k);
+      const have = existing.get(k);
+      if (have) {
+        // Doublon : on ne le recrée pas, mais on lui ajoute la capture si elle lui manquait.
+        if (t.screenshot && !have.screenshot) { have.screenshot = t.screenshot; have.updatedAt = Date.now(); attach.push(have); }
+        return false;
+      }
+      existing.set(k, t);
       return true;
     });
+    if (attach.length) { await db.bulkPut('trades', attach); state.rev += 1; attached = attach.length; }
   }
   await db.bulkPut('trades', toAdd);
   state.trades.push(...toAdd);
@@ -121,7 +129,7 @@ export async function importTrades(incoming, strategy = 'append') {
   let scenarios = s.scenarios;
   for (const t of toAdd) scenarios = withSuggestion(scenarios, t.scenario);
   await saveSettings({ pairs, timeframes, scenarios });
-  return { added: toAdd.length, ignored: incoming.length - toAdd.length };
+  return { added: toAdd.length, ignored: incoming.length - toAdd.length - attached, attached };
 }
 
 /** Ajoute des trades tels quels (identifiants conservés) : données de démonstration. */
@@ -198,7 +206,12 @@ export function syncAdapter() {
     setMeta: async (k, v) => { await db.put('meta', { key: `sync-${k}`, value: v }); },
     /** Applique ce que la fusion a décidé. N'incrémente PAS rev : ce ne sont pas des modifications locales. */
     async applyRemote({ trades, ideas, settings }) {
-      const up = trades.upsert.map((t) => normalizeTrade(t));
+      // Les captures ne passent pas par le cloud : on garde celle de cet appareil quand le trade distant n'en a pas.
+      const up = trades.upsert.map((t) => {
+        const n = normalizeTrade(t);
+        if (!n.screenshot) { const mine = state.trades.find((x) => x.id === n.id)?.screenshot; if (mine) n.screenshot = mine; }
+        return n;
+      });
       if (up.length) {
         await db.bulkPut('trades', up);
         for (const t of up) { const i = state.trades.findIndex((x) => x.id === t.id); if (i >= 0) state.trades[i] = t; else state.trades.push(t); }

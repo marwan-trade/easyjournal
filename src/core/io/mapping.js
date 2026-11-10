@@ -86,10 +86,29 @@ function parseRules(v) {
   return null;
 }
 
+/**
+ * Excel transforme une saisie « 1:2 » en heure (01:02), stockée comme fraction de jour. On la retrouve :
+ *   01:02    -> 1:2   -> RR 2
+ *   00:01:01.5 (saisie « 1:1.5 ») -> RR 1.5
+ * Retourne null si la valeur ne ressemble pas à ça (par exemple un vrai RR de 0.5).
+ */
+export function rrFromExcelTime(v) {
+  if (!(v > 0 && v < 1)) return null;
+  const total = Math.round(v * 86400 * 100) / 100; // secondes
+  if (total >= 3600) {
+    const h = Math.floor(total / 3600);
+    const m = Math.round((total - h * 3600) / 60);
+    return h === 1 && m > 0 && m < 60 ? m : null;
+  }
+  const min = Math.floor(total / 60);
+  const sec = Math.round((total - min * 60) * 100) / 100;
+  return min === 1 && sec > 0 ? sec : null;
+}
+
 /** « 1:1.5 » -> 1.5 ; « 2 » -> 2 ; « 1/3 » -> 3. */
 export function parseRR(v) {
   if (v === null || v === undefined || v === '') return null;
-  if (typeof v === 'number') return v > 0 ? v : null;
+  if (typeof v === 'number') return v > 0 ? (rrFromExcelTime(v) ?? v) : null;
   const s = String(v).trim();
   const m = /^\s*[\d.,]+\s*[:/]\s*([\d.,]+)\s*$/.exec(s);
   const n = parseNum(m ? m[1] : s);
@@ -103,10 +122,13 @@ const unescapeCell = (v) => (typeof v === 'string' ? v.replace(/^'([=+\-@])/, '$
  * @param {{mode?: 'reel'|'backtest'|null, customFields?: {key:string,label:string}[]}} opts
  * @returns {{trades:object[], skipped:{line:number, reason:string}[], unknownColumns:string[], needsMode:boolean}}
  */
-export function rowsToTrades(rows, { mode = null, customFields = [] } = {}) {
+export function rowsToTrades(rows, { mode = null, customFields = [], images = [] } = {}) {
   const trades = [];
+  const tradeImages = []; // alignée sur `trades` : { mime, bytes } ou null
+  const imageByRow = new Map(); // index de ligne (0 = en-têtes) -> image
+  for (const im of images) if (!imageByRow.has(im.row - 1)) imageByRow.set(im.row - 1, im);
   const skipped = [];
-  if (!rows.length) return { trades, skipped, unknownColumns: [], needsMode: false };
+  if (!rows.length) return { trades, images: tradeImages, skipped, unknownColumns: [], needsMode: false };
 
   const headers = rows[0].map((h) => strip(h));
   const idx = {};
@@ -123,7 +145,7 @@ export function rowsToTrades(rows, { mode = null, customFields = [] } = {}) {
   const unknownColumns = rows[0].map((h, i) => [h, i]).filter(([h, i]) => h && !known.has(i)).map(([h]) => String(h));
 
   if (idx.date === undefined) {
-    return { trades, skipped: [{ line: 1, reason: 'Colonne « Date » introuvable.' }], unknownColumns, needsMode: false };
+    return { trades, images: tradeImages, skipped: [{ line: 1, reason: 'Colonne « Date » introuvable.' }], unknownColumns, needsMode: false };
   }
   const needsMode = !mode && idx.mode === undefined;
 
@@ -148,6 +170,8 @@ export function rowsToTrades(rows, { mode = null, customFields = [] } = {}) {
     const custom = {};
     for (const [key, i] of customIdx) if (row[i] !== null && row[i] !== undefined && row[i] !== '') custom[key] = row[i];
 
+    const im = imageByRow.get(r);
+    tradeImages.push(im ? { mime: im.mime, bytes: im.bytes } : null);
     trades.push(
       normalizeTrade({
         mode: modeFromText(cell('mode')) ?? mode ?? 'reel',
@@ -170,17 +194,18 @@ export function rowsToTrades(rows, { mode = null, customFields = [] } = {}) {
       }),
     );
   }
-  return { trades, skipped, unknownColumns, needsMode };
+  return { trades, images: tradeImages, skipped, unknownColumns, needsMode };
 }
 
 /** Classeur Excel -> trades. Les feuilles sont rattachées au mode par leur nom. */
 export function workbookToTrades(sheets, opts = {}) {
-  const out = { trades: [], skipped: [], unknownColumns: [], ignoredSheets: [], needsMode: false };
+  const out = { trades: [], images: [], skipped: [], unknownColumns: [], ignoredSheets: [], needsMode: false };
   for (const sheet of sheets) {
     const mode = modeFromText(sheet.name);
     if (!mode) { out.ignoredSheets.push(sheet.name); continue; }
-    const res = rowsToTrades(sheet.rows, { ...opts, mode });
+    const res = rowsToTrades(sheet.rows, { ...opts, mode, images: sheet.images ?? [] });
     out.trades.push(...res.trades);
+    out.images.push(...res.images);
     out.skipped.push(...res.skipped.map((s) => ({ ...s, sheet: sheet.name })));
     for (const c of res.unknownColumns) if (!out.unknownColumns.includes(c)) out.unknownColumns.push(c);
   }

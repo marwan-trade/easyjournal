@@ -6,6 +6,8 @@
  */
 const at = (x) => Number(x?.updatedAt ?? x?.createdAt ?? 0);
 export const isDemoId = (id) => String(id).startsWith('demo-');
+/** Les captures d'écran restent sur l'appareil (trop lourdes pour la table) : on n'envoie que les données du trade. */
+const forCloud = (t) => { const { screenshot, ...rest } = t; return rest; };
 
 /** Fonction pure : compare local, pierres tombales et état distant ; dit quoi appliquer ici et quoi renvoyer. */
 export function planMerge({ local, tombstones, remote }) {
@@ -55,7 +57,7 @@ export async function runSync({ client, adapter, now = Date.now }) {
   // 2. Envoyer : tout ce qui a changé depuis le dernier envoi, plus ce que la fusion a désigné
   const cut = meta.lastPush;
   const tradeRows = local.trades.filter((t) => at(t) >= cut || plan.push.trades.has(t.id))
-    .map((t) => ({ id: t.id, mode: t.mode, date: t.date, data: t, updated_at: at(t), deleted: false }));
+    .map((t) => ({ id: t.id, mode: t.mode, date: t.date, data: forCloud(t), updated_at: at(t), deleted: false }));
   const ideaRows = local.ideas.filter((i) => at(i) >= cut || plan.push.ideas.has(i.id))
     .map((i) => ({ id: i.id, data: i, updated_at: at(i), deleted: false }));
   const tombRows = (kind) => Object.entries(tombstones[kind] ?? {})

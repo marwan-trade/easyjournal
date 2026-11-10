@@ -4,6 +4,7 @@ import { effectivePnl } from '../core/domain/money.js';
 import { summarize } from '../core/domain/stats.js';
 import { money, signClass, shortDate, formatNumber } from '../format.js';
 import { ResultPill, Empty, pipsText } from '../components/shared.jsx';
+import ShotViewer from '../components/ShotViewer.jsx';
 
 const EMPTY = { q: '', pair: '', scenario: '', result: '', from: '', to: '' };
 
@@ -11,6 +12,7 @@ export default function Journal({ state, onNew, onEdit }) {
   const { settings } = state;
   const all = tradesOf(settings.mode);
   const [f, setF] = useState(EMPTY);
+  const [shot, setShot] = useState(null);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const pairs = useMemo(() => [...new Set(all.map((t) => t.pair))].sort(), [all.length]);
   const scenarios = useMemo(() => [...new Set(all.map((t) => t.scenario).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr', { numeric: true })), [all.length]);
@@ -45,21 +47,23 @@ export default function Journal({ state, onNew, onEdit }) {
       </div>
       <p className="muted" aria-live="polite">{rows.length} trade(s) affiché(s) sur {all.length}{sum.open ? ` · ${sum.open} en cours` : ''}{sum.money.estimatedCount ? ` · ${sum.money.estimatedCount} montant(s) estimé(s) ≈` : ''}</p>
       {rows.length === 0 ? <p className="muted" style={{ padding: '16px 0' }}>Aucun trade ne correspond à ces filtres. <button className="btn" onClick={() => setF(EMPTY)}>Réinitialiser</button></p> : (
-        <div className="tablewrap"><table><thead><tr><th>Date</th><th>Paire</th><th>Sens</th><th>Scénario</th><th>Confirmation</th><th>Résultat</th><th className="num">Lots</th><th className="num">Pips</th><th className="num">Net</th></tr></thead><tbody>
+        <div className="tablewrap"><table><thead><tr><th>Date</th><th>Paire</th><th>Sens</th><th>Scénario</th><th>Confirmation</th><th>Résultat</th><th className="num">Lots</th><th className="num">Pips</th><th className="num">Net</th><th aria-label="Capture"></th></tr></thead><tbody>
           {rows.map((t) => { const p = effectivePnl(t, settings); return (
             <tr key={t.id} tabIndex={0} onClick={() => onEdit(t)} onKeyDown={(e) => e.key === 'Enter' && onEdit(t)}>
               <td>{shortDate(t.date)}</td><td>{t.pair}</td><td>{t.side || '—'}</td><td>{t.scenario || '—'}</td><td>{t.timeframe || '—'}</td>
               <td><ResultPill result={t.result} /></td><td className="num">{t.lots ?? '—'}</td><td className="num">{pipsText(t)}</td>
-              <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td></tr>); })}
+              <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td>
+              <td className="shotcell">{t.screenshot && <button type="button" className="shotbtn" title="Voir la capture" aria-label={`Voir la capture du trade ${t.pair} du ${t.date}`} onClick={(e) => { e.stopPropagation(); setShot(t); }}>▣</button>}</td></tr>); })}
         </tbody>
           <tfoot><tr>
             <td colSpan={5}><b>Total · {rows.length} trade(s)</b></td>
             <td><span className="win">{sum.wins} G</span> · <span className="loss">{sum.losses} P</span></td>
             <td className="num">{formatNumber(lots, { digits: 2 })}</td>
             <td className={`num ${signClass(sum.pips.total)}`}>{formatNumber(sum.pips.total, { sign: true })}</td>
-            <td className={`num ${signClass(sum.money.total)}`}><b>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td>
+            <td className={`num ${signClass(sum.money.total)}`}><b>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td><td />
           </tr></tfoot></table></div>
       )}
+      {shot && <ShotViewer trade={shot} list={rows.filter((t) => t.screenshot)} onChange={setShot} onClose={() => setShot(null)} />}
     </div>
   );
 }

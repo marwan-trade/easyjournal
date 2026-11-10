@@ -165,7 +165,65 @@ export async function readXlsx(buffer) {
     if (!target) continue;
     target = target.startsWith('/') ? target.slice(1) : `xl/${target}`;
     const xml = await zip.readText(target);
-    if (xml) sheets.push({ name, rows: parseSheet(xml, shared) });
+    if (xml) sheets.push({ name, rows: parseSheet(xml, shared), images: await readSheetImages(zip, target, xml) });
   }
   return sheets;
+}
+
+const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp' };
+
+/** Chemin relatif d'un fichier « _rels » : xl/worksheets/sheet2.xml -> xl/worksheets/_rels/sheet2.xml.rels */
+const relsPathOf = (path) => path.replace(/([^/]+)$/, '_rels/$1.rels');
+function resolvePath(baseFile, target) {
+  if (target.startsWith('/')) return target.slice(1);
+  const parts = baseFile.split('/').slice(0, -1);
+  for (const seg of target.split('/')) { if (seg === '..') parts.pop(); else if (seg !== '.') parts.push(seg); }
+  return parts.join('/');
+}
+function relationships(xml) {
+  const out = new Map();
+  for (const m of (xml ?? '').matchAll(/<Relationship\b([^>]*)\/?>/g)) {
+    const id = /\bId="([^"]*)"/.exec(m[1])?.[1];
+    const target = /\bTarget="([^"]*)"/.exec(m[1])?.[1];
+    if (id && target) out.set(id, target);
+  }
+  return out;
+}
+
+/**
+ * Images posées sur une feuille. Retourne [{ row, col, mime, bytes }] où `row` est le numéro de ligne Excel
+ * (à partir de 1) sur laquelle l'image se termine : une image qui déborde un peu sur l'en-tête reste
+ * rattachée à la ligne de données en dessous.
+ */
+async function readSheetImages(zip, sheetPath, sheetXml) {
+  const drawingRid = /<drawing\b[^>]*\br:id="([^"]*)"/.exec(sheetXml)?.[1];
+  if (!drawingRid) return [];
+  const sheetRels = relationships(await zip.readText(relsPathOf(sheetPath)));
+  const drawingTarget = sheetRels.get(drawingRid);
+  if (!drawingTarget) return [];
+  const drawingPath = resolvePath(sheetPath, drawingTarget);
+  const drawing = await zip.readText(drawingPath);
+  if (!drawing) return [];
+  const drawingRels = relationships(await zip.readText(relsPathOf(drawingPath)));
+  const out = [];
+  const anchorRe = /<(?:xdr:)?(oneCellAnchor|twoCellAnchor)\b[^>]*>([\s\S]*?)<\/(?:xdr:)?\1>/g;
+  for (const a of drawing.matchAll(anchorRe)) {
+    const body = a[2];
+    const embed = /<(?:a:)?blip\b[^>]*\br:embed="([^"]*)"/.exec(body)?.[1];
+    if (!embed) continue;
+    const target = drawingRels.get(embed);
+    if (!target) continue;
+    const mediaPath = resolvePath(drawingPath, target);
+    const ext = mediaPath.split('.').pop().toLowerCase();
+    if (!MIME[ext]) continue;
+    const pos = (tag) => {
+      const m = new RegExp(`<(?:xdr:)?${tag}>[\\s\\S]*?<(?:xdr:)?col>(\\d+)<\\/(?:xdr:)?col>[\\s\\S]*?<(?:xdr:)?row>(\\d+)<\\/(?:xdr:)?row>`).exec(body);
+      return m ? { col: Number(m[1]), row: Number(m[2]) } : null;
+    };
+    const end = pos('to') ?? pos('from');
+    if (!end) continue;
+    const bytes = await zip.read(mediaPath);
+    if (bytes) out.push({ row: end.row + 1, col: end.col, mime: MIME[ext], bytes });
+  }
+  return out;
 }
