@@ -6,6 +6,7 @@ _site/
 *.xlsx
 !tests/fixtures/sample.xlsx
 !tests/fixtures/sample_lo.xlsx
+!tests/fixtures/sample_images.xlsx
 easyjournal-sauvegarde-*.json
 easyjournal-trades-*.csv
 easyjournal-*.csv
