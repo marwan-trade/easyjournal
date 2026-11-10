@@ -9,14 +9,44 @@ import Dialog from '../components/Dialog.jsx';
 import ImportFlow, { prepareImport } from '../components/ImportFlow.jsx';
 import { toast } from '../components/toast.jsx';
 import SyncPanel from '../components/SyncPanel.jsx';
+import { MODE_LABELS } from '../core/domain/trade.js';
 
 function download(name, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
   const a = Object.assign(document.createElement('a'), { href: url, download: name });
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-const num = (v) => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+const num = (v) => { const n = Number(String(v).replace(/[\s\u00a0\u202f]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 const day = () => new Date().toISOString().slice(0, 10);
+
+
+/** Argent mis au départ : réel (ton compte) et backtest (argent virtuel). Le solde actuel = capital + résultat net. */
+function CapitalCard({ settings: s }) {
+  const [draft, setDraft] = useState({ reel: String(s.initialCapital.reel || ''), backtest: String(s.initialCapital.backtest || '') });
+  const commit = async (mode) => {
+    const v = Math.max(0, num(draft[mode]));
+    if (v === (s.initialCapital[mode] || 0)) return;
+    await saveSettings({ initialCapital: { ...s.initialCapital, [mode]: v } });
+    toast(`Capital ${MODE_LABELS[mode].toLowerCase()} enregistré.`);
+  };
+  const field = (mode, label, hint) => (
+    <label className="f">{label} ({s.currency})
+      <input inputMode="decimal" placeholder="ex. 1000" value={draft[mode]} onChange={(e) => setDraft((d) => ({ ...d, [mode]: e.target.value }))}
+        onBlur={() => commit(mode)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }} />
+      <small>{hint}</small>
+    </label>
+  );
+  return (
+    <section className="card" style={{ '--i': 1 }}>
+      <h2>Capital de départ</h2>
+      <p className="sub">L'argent que tu mets sur chaque compte. Le tableau de bord affiche le solde actuel : capital + résultat net des trades.</p>
+      <div className="capform">
+        {field('reel', 'Capital réel', "L'argent réellement déposé chez ton courtier.")}
+        {field('backtest', 'Capital backtest (virtuel)', "L'argent fictif avec lequel tu fais tes backtests.")}
+      </div>
+    </section>
+  );
+}
 
 export default function Settings({ state }) {
   const { settings: s } = state;
@@ -31,6 +61,7 @@ export default function Settings({ state }) {
   return (
     <div className="set">
       <SyncPanel />
+      <CapitalCard settings={s} />
       <section className="card" style={{ '--i': 1 }}>
         <h2>Données</h2>
         <p className="sub" style={{ margin: '4px 0 12px' }}>{state.persistent ? 'Tes trades sont enregistrés dans ce navigateur. Fais une sauvegarde régulière.' : 'Attention : stockage permanent indisponible (navigation privée ?). Exporte une sauvegarde.'}</p>

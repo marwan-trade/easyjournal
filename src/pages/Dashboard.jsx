@@ -19,6 +19,9 @@ export default function Dashboard({ state, onNew, onEdit }) {
   const tab = chosen ?? ['money', 'pips', 'outcome'].find((k) => s.curves[k === 'money' ? 'equity' : k].length > 1) ?? 'outcome';
   const setTab = setChosen;
   const dd = s.money.drawdown;
+  const net = s.money.total ?? 0;
+  const balance = cap + net;
+  const pct = cap > 0 && s.money.total !== null ? (net / cap) * 100 : null;
   const fmtInt = (v) => formatNumber(v, { digits: 2 });
   const series = {
     money: { pts: s.curves.equity, fy: (v) => money(v, settings, { digits: 0 }), label: 'Capital' },
@@ -29,10 +32,21 @@ export default function Dashboard({ state, onNew, onEdit }) {
 
   return (
     <>
-      <section className="grid kpis">
-        <div className="card" style={{ '--i': 0 }}><div className="k">Résultat net</div>
+      <section className="hero" aria-label="Capital et résultat">
+        <div className="card main" style={{ '--i': 0 }}>
+          <div className="k"><span>Solde actuel · {settings.mode === 'backtest' ? 'argent virtuel' : 'argent réel'}</span></div>
+          <div className="v"><CountUp value={balance} format={(v) => money(v, settings, { digits: 2 })} /></div>
+          <div className="sub">{cap > 0 ? `capital de départ + résultat net` : <>Capital non défini : <a href="#/settings">indique-le dans les Réglages</a></>}</div>
+        </div>
+        <div className="card" style={{ '--i': 1 }}><div className="k"><span>Capital de départ</span></div>
+          <div className="v">{cap > 0 ? <CountUp value={cap} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
+          <div className="sub">{settings.mode === 'backtest' ? 'argent virtuel mis en backtest' : 'argent mis sur le compte'}</div></div>
+        <div className="card" style={{ '--i': 2 }}><div className="k"><span>Résultat net</span>{pct !== null && <span className={`pct ${signClass(net)}`}>{formatNumber(pct, { digits: 1, sign: true })} %</span>}</div>
           <div className={`v ${signClass(s.money.total)}`}>{s.money.total === null ? '—' : <CountUp value={s.money.total} format={(v) => money(v, settings, { sign: true, digits: 2 })} />}</div>
           <div className="sub">{s.money.estimatedCount ? `dont ${s.money.estimatedCount} estimé(s) ≈` : `sur ${s.completed} trade(s)`}</div></div>
+      </section>
+
+      <section className="grid kpis">
         <div className="card" style={{ '--i': 1 }}><div className="k">Réussite</div>
           <div className="v">{s.winRate === null ? '—' : <CountUp value={s.winRate * 100} format={(v) => `${v.toFixed(1).replace('.', ',')} %`} />}</div>
           <div className="sub">{s.wins} gagnants · {s.losses} perdants</div></div>
