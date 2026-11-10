@@ -61,8 +61,10 @@ export function effectivePnl(t, settings) {
     return { value: applyResultSign(t.pnl, t.result), estimated: false };
   }
   const pips = signedPips(t);
-  if (pips !== null && t.lots && t.lots > 0) {
-    const gross = pips * t.lots * pipValueFor(t.pair, settings);
+  // Sans lots saisis, on prend le lot par défaut des réglages (comme la case « Lot par défaut » du cahier Excel).
+  const lots = t.lots > 0 ? t.lots : settings.defaultLots > 0 ? settings.defaultLots : null;
+  if (pips !== null && lots) {
+    const gross = pips * lots * pipValueFor(t.pair, settings);
     return { value: gross - (t.fees ?? 0), estimated: true };
   }
   return null;

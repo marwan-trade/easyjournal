@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeTrade, validateTrade, parseNum, applyResultSign, isValidISODate } from '../src/core/domain/trade.js';
 import { effectivePnl, rMultiple, pipValueFor, formatMoney } from '../src/core/domain/money.js';
 import { summarize, maxDrawdown, streaks, sortTrades } from '../src/core/domain/stats.js';
+import { mergeSettings } from '../src/core/store/settings.js';
 
 const settings = { currency: 'USD', defaultPipValue: 10, pipValues: { USDJPY: 6.5 } };
 let n = 0;
@@ -184,4 +185,14 @@ test('estimation de l\'argent : pips × lots × valeur du pip − frais', () => 
   assert.equal(effectivePnl(t, s).value, 89);                              // 45 × 0,2 × 10 − 1
   const jpy = normalizeTrade({ date: '2026-01-05', pair: 'USDJPY', result: 'Perdant', pips: 30, lots: 0.5 });
   assert.ok(Math.abs(effectivePnl(jpy, s).value + 100.5) < 0.01);          // −30 × 0,5 × 6,7
+});
+
+test('sans lots saisis : le lot par défaut des réglages sert à estimer l\'argent', () => {
+  const settings = mergeSettings({});
+  const t = normalizeTrade({ date: '2026-01-05', pair: 'AUDUSD', result: 'Gagnant', pips: 20.5 });
+  const p = effectivePnl(t, settings);
+  assert.equal(Math.round(p.value * 100) / 100, 2.05); // 20,5 pips × 0,01 lot × 10 $
+  assert.equal(p.estimated, true);
+  assert.equal(effectivePnl(t, { ...settings, defaultLots: 0 }), null); // désactivé
+  assert.equal(effectivePnl({ ...t, lots: 0.1 }, settings).value, 20.5 * 0.1 * 10); // des lots saisis priment
 });

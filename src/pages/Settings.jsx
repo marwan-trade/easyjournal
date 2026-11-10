@@ -22,12 +22,18 @@ const day = () => new Date().toISOString().slice(0, 10);
 
 /** Argent mis au départ : réel (ton compte) et backtest (argent virtuel). Le solde actuel = capital + résultat net. */
 function CapitalCard({ settings: s }) {
-  const [draft, setDraft] = useState({ reel: String(s.initialCapital.reel || ''), backtest: String(s.initialCapital.backtest || '') });
+  const [draft, setDraft] = useState({ reel: String(s.initialCapital.reel || ''), backtest: String(s.initialCapital.backtest || ''), lots: String(s.defaultLots ?? '') });
   const commit = async (mode) => {
     const v = Math.max(0, num(draft[mode]));
     if (v === (s.initialCapital[mode] || 0)) return;
     await saveSettings({ initialCapital: { ...s.initialCapital, [mode]: v } });
     toast(`Capital ${MODE_LABELS[mode].toLowerCase()} enregistré.`);
+  };
+  const commitLots = async () => {
+    const v = Math.max(0, num(draft.lots));
+    if (v === s.defaultLots) return;
+    await saveSettings({ defaultLots: v });
+    toast(v > 0 ? `Lot par défaut : ${v}.` : "Lot par défaut désactivé : l'argent ne sera calculé que si tu saisis les lots.");
   };
   const field = (mode, label, hint) => (
     <label className="f">{label} ({s.currency})
@@ -38,11 +44,16 @@ function CapitalCard({ settings: s }) {
   );
   return (
     <section className="card" style={{ '--i': 1 }}>
-      <h2>Capital de départ</h2>
+      <h2>Capital et lot</h2>
       <p className="sub">L'argent que tu mets sur chaque compte. Le tableau de bord affiche le solde actuel : capital + résultat net des trades.</p>
       <div className="capform">
         {field('reel', 'Capital réel', "L'argent réellement déposé chez ton courtier.")}
         {field('backtest', 'Capital backtest (virtuel)', "L'argent fictif avec lequel tu fais tes backtests.")}
+        <label className="f">Lot par défaut
+          <input inputMode="decimal" placeholder="0,01" value={draft.lots} onChange={(e) => setDraft((d) => ({ ...d, lots: e.target.value }))}
+            onBlur={commitLots} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }} />
+          <small>Utilisé pour calculer l'argent quand tu ne saisis pas les lots d'un trade (0 = ne pas estimer).</small>
+        </label>
       </div>
     </section>
   );

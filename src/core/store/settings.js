@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS = {
   mode: 'reel', // mode affiché
   currency: 'USD',
   initialCapital: { reel: 0, backtest: 0 },
+  defaultLots: 0.01, // lot utilisé pour estimer l'argent quand un trade n'a pas de lots (0 = ne pas estimer)
   defaultPipValue: 10, // repli si la paire est inconnue (or, indices…)
   pipValues: {}, // valeur forcée par paire : { USDJPY: 6.5 } (sinon calculée automatiquement)
   conversionRates: {}, // taux perso : valeur de 1 unité de la devise dans la devise du compte { JPY: 0.0065 }
@@ -38,6 +39,7 @@ export function mergeSettings(stored) {
   if (!['reel', 'backtest'].includes(out.mode)) out.mode = 'reel';
   if (!['auto', 'light', 'dark'].includes(out.theme)) out.theme = 'auto';
   out.currency = String(out.currency || 'USD').toUpperCase().slice(0, 8);
+  if (!(out.defaultLots >= 0)) out.defaultLots = DEFAULT_SETTINGS.defaultLots;
   if (!(out.defaultPipValue > 0)) out.defaultPipValue = DEFAULT_SETTINGS.defaultPipValue;
   return out;
 }
