@@ -216,3 +216,5 @@ body:has(dialog[open]) aside,body:has(dialog[open]) .tabbar{backdrop-filter:none
 @media(max-width:480px){.hero{grid-template-columns:minmax(0,1fr)}}
 .capform{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:12px}
 .capform small{color:var(--muted);font-size:.78rem}
+
+td.bal{color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
