@@ -20,7 +20,7 @@ for (const file of ['sample.xlsx', 'sample_lo.xlsx']) {
 
   test(`import (${file}) : feuilles rattachées au bon mode, lignes cassées signalées`, async () => {
     const res = workbookToTrades(await readXlsx(await fixture(file)));
-    assert.deepEqual(res.ignoredSheets, ['Résumé']);
+    assert.deepEqual(res.ignoredSheets, []);
     const bt = res.trades.filter((t) => t.mode === 'backtest');
     const re = res.trades.filter((t) => t.mode === 'reel');
     assert.equal(bt.length, 3);
