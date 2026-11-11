@@ -63,29 +63,31 @@ export default function Dashboard({ state, onNew, onEdit }) {
           <div className="sub">{dd?.pct != null ? `${formatPercent(dd.pct, 1)} du sommet` : s.open ? `${s.open} trade(s) en cours` : ' '}</div></div>
       </section>
 
-      <section className="grid two">
-        <div className="card" style={{ '--i': 5 }}>
+      <section className="feature" style={{ '--i': 5 }}>
+      <div className="card flat">
           <div className="card-head"><h2>Évolution</h2>
             <div className="seg sm" role="group" aria-label="Type de courbe">
               {[['money', 'Argent'], ['pips', 'Pips'], ['outcome', '+1 / −1']].map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}
             </div></div>
-          <LineChart key={tab} points={series.pts} formatY={series.fy} label={series.label} />
+          <LineChart key={tab} points={series.pts} formatY={series.fy} label={series.label} onSelect={onEdit} />
+          <p className="chart-hint">Clique sur un point pour ouvrir le trade correspondant.</p>
         </div>
+      </section>
+
+      <section className="grid two">
         <div className="card" style={{ '--i': 6 }}>
           <h2>Par scénario</h2><div className="sub">Taux de réussite</div>
           {s.byScenario.length ? <RateBars rows={s.byScenario} /> : <p className="muted">Renseigne le scénario de tes trades pour voir cette répartition.</p>}
           <h3>Discipline</h3>
           <div className="sub">Règles respectées : {s.discipline.followed.winRate === null ? '—' : formatPercent(s.discipline.followed.winRate)} de réussite ({s.discipline.followed.total}) <br />Règles non respectées : {s.discipline.broken.winRate === null ? '—' : formatPercent(s.discipline.broken.winRate)} ({s.discipline.broken.total})</div>
         </div>
-      </section>
-
-      <section className="card" style={{ '--i': 7 }}>
-        <h2>Derniers trades</h2>
-        <div className="tablewrap"><table><thead><tr><th>Date</th><th>Paire</th><th>Scénario</th><th>Résultat</th><th className="num">Pips</th><th className="num">Net</th></tr></thead><tbody>
-          {recent.map((t) => { const p = effectivePnl(t, settings); return (
-            <tr key={t.id} onClick={() => onEdit(t)}><td>{shortDate(t.date)}</td><td>{t.pair}</td><td>{t.scenario || '—'}</td><td><ResultPill result={t.result} /></td><td className="num">{pipsText(t)}</td>
-              <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td></tr>); })}
-        </tbody></table></div>
+        <div className="card" style={{ '--i': 7 }}>
+          <h2>Derniers trades</h2>
+          <div className="tablewrap"><table><thead><tr><th>Date</th><th>Paire</th><th>Résultat</th><th className="num">Pips</th></tr></thead><tbody>
+            {recent.map((t) => (
+              <tr key={t.id} tabIndex={0} onClick={() => onEdit(t)} onKeyDown={(e) => e.key === 'Enter' && onEdit(t)}><td>{shortDate(t.date)}</td><td>{t.pair}</td><td><ResultPill result={t.result} /></td><td className="num">{pipsText(t)}</td></tr>))}
+          </tbody></table></div>
+        </div>
       </section>
     </>
   );
