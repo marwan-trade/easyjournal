@@ -70,6 +70,7 @@ export default function App() {
         </aside>
         <main id="main" tabIndex={-1}>
           <div className="mobilebrand"><Logo size={26} /><span>EasyJournal</span></div>
+          {!((state.settings.initialCapital[mode] || 0) > 0) && <div className="remind" role="status"><span><b>Dépôt manquant.</b> Écris l'argent mis sur ton compte : sans lui, ton argent actuel et tes gains ne s'affichent pas.</span><button type="button" className="btn primary" onClick={() => { try { localStorage.removeItem('easyjournal.skipDeposit'); } catch { /* ignoré */ } setSkipDeposit(false); }}>Écrire mon dépôt</button></div>}
           <header className="top">
             <h1><small>{FEATURES.backtest ? `Mode ${MODE_LABELS[mode]} · ` : ''}{state.settings.currency}</small>{route.title}</h1>
             <div className="actions">

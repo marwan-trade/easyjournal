@@ -25,6 +25,7 @@ export default function Journal({ state, onNew, onEdit }) {
 
   // Colonne Solde : la valeur réelle que tu saisis pour chaque trade (comme dans l'Excel).
   const currentBalance = realBalance(all, settings.initialCapital[settings.mode] || 0);
+  const cap0 = !((settings.initialCapital[settings.mode] || 0) > 0); // sans dépôt : montants masqués
   const sum = summarize(rows, settings);
   const lots = rows.reduce((a, t) => a + (t.lots ?? 0), 0);
 
@@ -42,9 +43,9 @@ export default function Journal({ state, onNew, onEdit }) {
       <div className="totals" aria-label="Totaux des trades affichés">
         <div><span className="k">Gagnants</span><b className="win">{sum.wins}</b></div>
         <div><span className="k">Perdants</span><b className="loss">{sum.losses}</b></div>
-        <div><span className="k">Total gagné</span><b className="win">{money(sum.money.grossWin, settings, { sign: true })}</b></div>
-        <div><span className="k">Total perdu</span><b className="loss">{money(-sum.money.grossLoss, settings, { sign: true })}</b></div>
-        <div><span className="k">Net</span><b className={signClass(sum.money.total)}>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></div>
+        <div><span className="k">Total gagné</span><b className="win">{cap0 ? '—' : money(sum.money.grossWin, settings, { sign: true })}</b></div>
+        <div><span className="k">Total perdu</span><b className="loss">{cap0 ? '—' : money(-sum.money.grossLoss, settings, { sign: true })}</b></div>
+        <div><span className="k">Net</span><b className={signClass(sum.money.total)}>{cap0 || sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></div>
         <div><span className="k">Pips</span><b className={signClass(sum.pips.total)}>{formatNumber(sum.pips.total, { sign: true })}</b></div>
       </div>
       <p className="muted" aria-live="polite">{rows.length} trade(s) affiché(s) sur {all.length}{sum.open ? ` · ${sum.open} en cours` : ''}{sum.money.estimatedCount ? ` · ${sum.money.estimatedCount} montant(s) estimé(s) ≈` : ''}</p>
@@ -69,7 +70,7 @@ export default function Journal({ state, onNew, onEdit }) {
             <td className={`num ${signClass(sum.pips.total)}`}>{formatNumber(sum.pips.total, { sign: true })}</td>
             <td className="num">{formatNumber(lots, { digits: 2 })}</td>
             <td className={`num ${signClass(sum.money.total)}`}><b>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td>
-            <td className="num bal" title="Argent actuel"><b>{money(currentBalance, settings, { digits: 2 })}</b></td>
+            <td className="num bal" title="Argent actuel"><b>{cap0 ? '—' : money(currentBalance, settings, { digits: 2 })}</b></td>
           </tr></tfoot></table></div>
       )}
       {shot && <ShotViewer trade={shot} list={rows.filter((t) => t.screenshot)} onChange={setShot} onClose={() => setShot(null)} />}

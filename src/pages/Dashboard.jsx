@@ -19,6 +19,8 @@ export default function Dashboard({ state, onNew, onEdit }) {
   const tab = chosen ?? ['money', 'pips', 'outcome'].find((k) => s.curves[k === 'money' ? 'equity' : k].length > 1) ?? 'outcome';
   const setTab = setChosen;
   const dd = s.money.drawdown;
+  const noDeposit = !(cap > 0); // sans dépôt : aucun montant d'argent n'est affiché
+
   const shown = realBalance(trades, cap); // argent actuel = dépôt + gains − pertes réels (même calcul que l'Excel)
   const net = shown - cap;
   const fmtInt = (v) => formatNumber(v, { digits: 2 });
@@ -35,7 +37,7 @@ export default function Dashboard({ state, onNew, onEdit }) {
         <div>
           <div className="k">Argent actuel</div>
           <div className="v">{cap > 0 ? money(shown, settings, { digits: 2 }) : '—'}</div>
-          <div className="sub">{cap > 0 ? <>argent mis sur le compte {money(cap, settings, { digits: 2 })}</> : <>dépôt non défini : <a href="#/settings">indique l'argent mis sur ton compte</a></>} · gagné / perdu <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b></div>
+          <div className="sub">{cap > 0 ? <>argent mis sur le compte {money(cap, settings, { digits: 2 })} · gagné / perdu <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b></> : <>Dépôt non défini : <a href="#/settings">écris l'argent mis sur ton compte</a> pour voir ton argent actuel.</>}</div>
         </div>
         <a className="btn" href="#/settings">Modifier le dépôt</a>
       </section>
@@ -46,10 +48,10 @@ export default function Dashboard({ state, onNew, onEdit }) {
           <div className="sub">{s.wins} gagnants · {s.losses} perdants</div></div>
         <div className="card" style={{ '--i': 2 }}><div className="k">Trades gagnants</div>
           <div className="v win"><CountUp value={s.wins} format={(v) => String(Math.round(v))} /></div>
-          <div className="sub">{s.money.total === null ? 'gain estimé : —' : `gain estimé ≈ ${money(s.money.grossWin, settings, { sign: true, digits: 2 })}`}</div></div>
+          <div className="sub">{noDeposit || s.money.total === null ? 'montant masqué : dépôt non défini' : `gain estimé ≈ ${money(s.money.grossWin, settings, { sign: true, digits: 2 })}`}</div></div>
         <div className="card" style={{ '--i': 2 }}><div className="k">Trades perdants</div>
           <div className="v loss"><CountUp value={s.losses} format={(v) => String(Math.round(v))} /></div>
-          <div className="sub">{s.money.total === null ? 'perte estimée : —' : `perte estimée ≈ ${money(-s.money.grossLoss, settings, { sign: true, digits: 2 })}`}</div></div>
+          <div className="sub">{noDeposit || s.money.total === null ? 'montant masqué : dépôt non défini' : `perte estimée ≈ ${money(-s.money.grossLoss, settings, { sign: true, digits: 2 })}`}</div></div>
         <div className="card" style={{ '--i': 2 }}><div className="k">Profit factor</div>
           <div className="v">{s.money.profitFactor === null ? '—' : s.money.profitFactor === Infinity ? '∞' : <CountUp value={s.money.profitFactor} format={fmtInt} />}</div>
           <div className="sub">gains ÷ pertes</div></div>
@@ -57,7 +59,7 @@ export default function Dashboard({ state, onNew, onEdit }) {
           <div className={`v ${signClass(s.pips.total)}`}>{s.pips.total === null ? '—' : <CountUp value={s.pips.total} format={(v) => formatNumber(v, { digits: 1, sign: true })} />}</div>
           <div className="sub">{s.pips.coverage.with} / {s.pips.coverage.of} saisis</div></div>
         <div className="card" style={{ '--i': 4 }}><div className="k">Drawdown max</div>
-          <div className="v loss">{dd ? <CountUp value={-dd.amount} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
+          <div className="v loss">{dd && !noDeposit ? <CountUp value={-dd.amount} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
           <div className="sub">{dd?.pct != null ? `${formatPercent(dd.pct, 1)} du sommet` : s.open ? `${s.open} trade(s) en cours` : ' '}</div></div>
       </section>
 
