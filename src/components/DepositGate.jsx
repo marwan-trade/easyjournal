@@ -8,7 +8,7 @@ const num = (s) => Number(String(s).replace(/[\s ]/g, '').replace(',', '.'));
  * Écran obligatoire tant que l'argent mis sur le compte n'est pas renseigné :
  * le solde actuel = dépôt + gains − pertes ne peut pas se calculer sans lui.
  */
-export default function DepositGate({ settings, onGuestLogout }) {
+export default function DepositGate({ settings, onSkip, onGuestLogout }) {
   const [v, setV] = useState('');
   const [err, setErr] = useState('');
   const save = async (e) => {
@@ -27,6 +27,8 @@ export default function DepositGate({ settings, onGuestLogout }) {
           <input autoFocus inputMode="decimal" value={v} onChange={(e) => { setV(e.target.value); setErr(''); }} placeholder="ex. 12,58" aria-invalid={!!err} /></label>
         {err && <p className="err" role="alert">{err}</p>}
         <button className="btn primary" type="submit">Valider mon dépôt</button>
+        <button className="btn" type="button" onClick={onSkip}>Passer pour l'instant</button>
+        <p className="fine">Tu pourras l'écrire plus tard dans Réglages ; l'argent actuel sera calculé une fois le dépôt renseigné.</p>
         {onGuestLogout && <button className="btn" type="button" onClick={onGuestLogout}>Se déconnecter</button>}
       </form>
     </div>

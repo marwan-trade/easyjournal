@@ -34,8 +34,8 @@ export default function Dashboard({ state, onNew, onEdit }) {
       <section className="deposit" aria-label="Argent actuel" style={{ '--i': 0 }}>
         <div>
           <div className="k">Argent actuel</div>
-          <div className="v">{money(shown, settings, { digits: 2 })}</div>
-          <div className="sub">argent mis sur le compte {money(cap, settings, { digits: 2 })} · gagné / perdu <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b></div>
+          <div className="v">{cap > 0 ? money(shown, settings, { digits: 2 }) : '—'}</div>
+          <div className="sub">{cap > 0 ? <>argent mis sur le compte {money(cap, settings, { digits: 2 })}</> : <>dépôt non défini : <a href="#/settings">indique l'argent mis sur ton compte</a></>} · gagné / perdu <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b></div>
         </div>
         <a className="btn" href="#/settings">Modifier le dépôt</a>
       </section>

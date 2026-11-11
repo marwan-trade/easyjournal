@@ -46,7 +46,7 @@ function CapitalCard({ settings: s }) {
   return (
     <section className="card" style={{ '--i': 1 }}>
       <h2>Argent en dépôt et lot</h2>
-      <p className="sub">L'argent que tu mets sur chaque compte. Le tableau de bord affiche le solde actuel : capital + résultat net des trades.</p>
+      <p className="sub">L'argent mis sur ton compte de trading. Le tableau de bord affiche l'argent actuel : dépôt + gains − pertes réels (le « Solde réel » de chaque trade).</p>
       <div className="capform">
         {field('reel', 'Argent en dépôt', "L'argent réellement déposé chez ton courtier : il s'affiche en haut du tableau de bord.")}
         {FEATURES.backtest && field('backtest', 'Capital backtest (virtuel)', "L'argent fictif avec lequel tu fais tes backtests.")}

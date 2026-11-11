@@ -37,6 +37,7 @@ export default function App() {
   const [form, setForm] = useState(null); // { trade } ; trade = null → nouveau
   const [err, setErr] = useState(null);
   const [guest, setGuest] = useState(() => { try { return localStorage.getItem('easyjournal.guest') === '1'; } catch { return false; } });
+  const [skipDeposit, setSkipDeposit] = useState(() => { try { return localStorage.getItem('easyjournal.skipDeposit') === '1'; } catch { return false; } });
   const leaveGuest = () => { try { localStorage.removeItem('easyjournal.guest'); } catch { /* ignoré */ } setGuest(false); };
   const logout = async () => { try { await signOut(); } catch (e) { console.error(e); } leaveGuest(); window.location.hash = '#/'; };
   const continueAsGuest = () => { try { localStorage.setItem('easyjournal.guest', '1'); } catch { /* ignoré */ } setGuest(true); };
@@ -54,8 +55,8 @@ export default function App() {
   if (!state.ready) return null;
   if (sync.configured && !sync.signedIn && !guest) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><AuthPage onGuest={continueAsGuest} /><Toasts /></>;
   const mode = state.settings.mode;
-  const needsDeposit = !((state.settings.initialCapital[mode] || 0) > 0); // sans dépôt, impossible de calculer le solde actuel
-  if (needsDeposit) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><DepositGate settings={state.settings} onGuestLogout={sync.signedIn ? logout : null} /><Toasts /></>;
+  const needsDeposit = !((state.settings.initialCapital[mode] || 0) > 0) && !skipDeposit; // dépôt demandé, mais on peut passer
+  if (needsDeposit) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><DepositGate settings={state.settings} onSkip={() => { try { localStorage.setItem('easyjournal.skipDeposit', '1'); } catch { /* ignoré */ } setSkipDeposit(true); }} onGuestLogout={sync.signedIn ? logout : null} /><Toasts /></>;
 
   return (
     <>
