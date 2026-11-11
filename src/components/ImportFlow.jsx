@@ -5,7 +5,7 @@ import { readXlsx } from '../core/io/xlsx.js';
 import { parseCSV } from '../core/io/csv.js';
 import { workbookToTrades, rowsToTrades } from '../core/io/mapping.js';
 import { parseBackup } from '../core/io/json.js';
-import { importTrades, restoreBackup } from '../store.js';
+import { importTrades, restoreBackup, saveSettings, state } from '../store.js';
 import { FEATURES } from '../config.js';
 import { compressImage } from '../core/io/images.js';
 
@@ -29,6 +29,7 @@ export default function ImportFlow({ prepared, onClose }) {
   const [strategy, setStrategy] = useState('append');
   const [mode, setMode] = useState('reel');
   const [busy, setBusy] = useState(false);
+  const [useSummary, setUseSummary] = useState(true);
 
   if (prepared.kind === 'backup') {
     const d = prepared.data;
@@ -48,6 +49,8 @@ export default function ImportFlow({ prepared, onClose }) {
   const skippedBt = all.length - trades.length;
   const counts = { reel: trades.filter((t) => t.mode === 'reel').length, backtest: trades.filter((t) => t.mode === 'backtest').length };
   const noPips = trades.filter((t) => (t.result === 'Gagnant' || t.result === 'Perdant') && t.pips === null).length;
+  const sum = res.summary ?? { deposit: null, defaultLots: null };
+  const hasSum = !!(sum.deposit || sum.defaultLots);
   const imgCount = keep.filter((i) => res.images?.[i]).length;
   const [progress, setProgress] = useState('');
   const go = async () => {
@@ -62,6 +65,12 @@ export default function ImportFlow({ prepared, onClose }) {
         withShots.push(screenshot ? { ...trades[i], screenshot } : trades[i]);
       }
       const r = await importTrades(withShots, strategy);
+      if (useSummary && (sum.deposit || sum.defaultLots)) {
+        const patch = {};
+        if (sum.deposit) patch.initialCapital = { ...state.settings.initialCapital, reel: sum.deposit };
+        if (sum.defaultLots) patch.defaultLots = sum.defaultLots;
+        await saveSettings(patch);
+      }
       toast(`${r.added} trade(s) importé(s)${r.updated ? `, ${r.updated} trade(s) existant(s) mis à jour (pips, lots, solde…)` : ''}${r.attached ? `, ${r.attached} capture(s) ajoutée(s) à des trades existants` : ''}${r.ignored ? `, ${r.ignored} doublon(s) ignoré(s)` : ''}.`);
       onClose();
     } catch (e) { setBusy(false); setProgress(''); toast(`Import impossible : ${e.message}`); }
@@ -78,6 +87,7 @@ export default function ImportFlow({ prepared, onClose }) {
           {imgCount > 0 && <p>🖼 {imgCount} capture(s) d'écran détectée(s) : elles seront importées avec leur trade.</p>}
           {noPips > 0 && <p className="muted">{noPips} trade(s) terminé(s) sans pips (cellule vide dans ton fichier) : ils comptent dans les gagnants/perdants, mais l'argent ne peut pas être calculé. Tu pourras compléter les pips ensuite.</p>}
           {note && <p className="muted">{note}</p>}
+          {hasSum && <label style={{ display: 'flex', gap: 10 }}><input type="checkbox" style={{ width: 'auto' }} checked={useSummary} onChange={(e) => setUseSummary(e.target.checked)} /><span>Reprendre les réglages de l'Excel :{sum.deposit ? ` dépôt ${String(sum.deposit).replace('.', ',')} $` : ''}{sum.deposit && sum.defaultLots ? ',' : ''}{sum.defaultLots ? ` lot par défaut ${sum.defaultLots}` : ''}</span></label>}
           {res.unknownColumns.filter((c) => !/reference|repere|solde|calcule/i.test(c.normalize('NFD').replace(/[̀-ͯ]/g, ''))).length > 0 && <p className="muted">Colonnes non reprises : {res.unknownColumns.filter((c) => !/reference|repere|solde|calcule/i.test(c.normalize('NFD').replace(/[̀-ͯ]/g, ''))).join(', ')}.</p>}
           {res.skipped.length > 0 && <div className="banner">{res.skipped.length} ligne(s) ignorée(s) :<ul style={{ margin: '6px 0 0 18px', padding: 0 }}>{res.skipped.slice(0, 5).map((s, i) => <li key={i}>{s.sheet ? `${s.sheet}, ` : ''}ligne {s.line} : {s.reason}</li>)}</ul></div>}
           <label style={{ display: 'flex', gap: 10 }}><input type="radio" style={{ width: 'auto' }} checked={strategy === 'append'} onChange={() => setStrategy('append')} /><span><b>Ajouter</b> à mes trades (les doublons exacts sont ignorés)</span></label>

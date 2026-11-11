@@ -136,3 +136,11 @@ test('RR saisi « 1:2 » ou « 1:1.5 » devenu une heure dans Excel : retrouvé'
   assert.equal(parseRR('1:3'), 3);
   assert.equal(parseRR(2), 2);
 });
+
+test('readSummarySettings lit le dépôt réel et le lot par défaut du Résumé', async () => {
+  const { readSummarySettings } = await import('../src/core/io/mapping.js');
+  const sheets = [{ name: 'Résumé', rows: [['Mode', 'Dépôt'], ['Backtest (argent mis sur le compte)', 500], ['Réel (argent mis sur le compte)', '12,58'], ['Lot par défaut', 0.02]] }];
+  assert.deepEqual(readSummarySettings(sheets), { deposit: 12.58, defaultLots: 0.02 });
+  sheets[0].rows[2][1] = '';
+  assert.equal(readSummarySettings(sheets).deposit, null);
+});

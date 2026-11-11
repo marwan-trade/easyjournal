@@ -199,12 +199,34 @@ export function rowsToTrades(rows, { mode = null, customFields = [], images = []
   return { trades, images: tradeImages, skipped, unknownColumns, needsMode };
 }
 
+const num = (v) => {
+  if (typeof v === 'number') return v;
+  const n = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.').replace(/[^0-9.\-]/g, ''));
+  return String(v ?? '').trim() === '' ? NaN : n;
+};
+
+/** Cherche, dans la feuille « Résumé », le dépôt « Réel » et le lot par défaut (valeur dans la cellule à droite du libellé). */
+export function readSummarySettings(sheets) {
+  const out = { deposit: null, defaultLots: null };
+  const sheet = sheets.find((s) => /^resume/.test(strip(s.name)));
+  if (!sheet) return out;
+  for (const row of sheet.rows) {
+    const label = strip(row[0]);
+    if (!label) continue;
+    const v = num(row[1]);
+    if (!(v > 0)) continue;
+    if (/^reel/.test(label) && /argent|compte|depot/.test(label)) out.deposit = v;
+    else if (/lotpardefaut/.test(label)) out.defaultLots = v;
+  }
+  return out;
+}
+
 /** Classeur Excel -> trades. Les feuilles sont rattachées au mode par leur nom. */
 export function workbookToTrades(sheets, opts = {}) {
-  const out = { trades: [], images: [], skipped: [], unknownColumns: [], ignoredSheets: [], needsMode: false };
+  const out = { trades: [], images: [], skipped: [], unknownColumns: [], ignoredSheets: [], needsMode: false, summary: readSummarySettings(sheets) };
   for (const sheet of sheets) {
     const mode = modeFromText(sheet.name);
-    if (!mode) { out.ignoredSheets.push(sheet.name); continue; }
+    if (!mode) { if (!/^resume/.test(strip(sheet.name))) out.ignoredSheets.push(sheet.name); continue; }
     const res = rowsToTrades(sheet.rows, { ...opts, mode, images: sheet.images ?? [] });
     out.trades.push(...res.trades);
     out.images.push(...res.images);
