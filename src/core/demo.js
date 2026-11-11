@@ -1,3 +1,4 @@
+import { FEATURES } from '../config.js';
 /**
  * Données FICTIVES de démonstration. Toutes les lignes ont un identifiant « demo-… »
  * pour pouvoir être supprimées d'un clic sans toucher aux vrais trades.
@@ -49,7 +50,7 @@ function make(mode, n, daysBack, pairs, withMoney, rand) {
 /** 42 trades de backtest + 18 trades réels (le dernier est « en cours »). */
 export function demoTrades() {
   const rand = rng(7);
-  const bt = make('backtest', 42, 130, ['GBPUSD', 'EURUSD', 'USDJPY'], false, rand);
+  const bt = FEATURES.backtest ? make('backtest', 42, 130, ['GBPUSD', 'EURUSD', 'USDJPY'], false, rand) : [];
   const real = make('reel', 18, 56, ['GBPUSD', 'EURUSD', 'USDJPY', 'AUDCAD'], true, rand);
   Object.assign(real[real.length - 1], { result: '', pips: null, pnl: null, rulesFollowed: null, notes: 'Trade en cours.' });
   return [...bt, ...real].map((t) => normalizeTrade(t));

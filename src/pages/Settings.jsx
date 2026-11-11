@@ -10,6 +10,7 @@ import ImportFlow, { prepareImport } from '../components/ImportFlow.jsx';
 import { toast } from '../components/toast.jsx';
 import SyncPanel from '../components/SyncPanel.jsx';
 import { MODE_LABELS } from '../core/domain/trade.js';
+import { FEATURES } from '../config.js';
 
 function download(name, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
@@ -27,7 +28,7 @@ function CapitalCard({ settings: s }) {
     const v = Math.max(0, num(draft[mode]));
     if (v === (s.initialCapital[mode] || 0)) return;
     await saveSettings({ initialCapital: { ...s.initialCapital, [mode]: v } });
-    toast(`Capital ${MODE_LABELS[mode].toLowerCase()} enregistré.`);
+    toast(FEATURES.backtest ? `Capital ${MODE_LABELS[mode].toLowerCase()} enregistré.` : "Argent en dépôt enregistré.");
   };
   const commitLots = async () => {
     const v = Math.max(0, num(draft.lots));
@@ -44,11 +45,11 @@ function CapitalCard({ settings: s }) {
   );
   return (
     <section className="card" style={{ '--i': 1 }}>
-      <h2>Capital et lot</h2>
+      <h2>Argent en dépôt et lot</h2>
       <p className="sub">L'argent que tu mets sur chaque compte. Le tableau de bord affiche le solde actuel : capital + résultat net des trades.</p>
       <div className="capform">
-        {field('reel', 'Capital réel', "L'argent réellement déposé chez ton courtier.")}
-        {field('backtest', 'Capital backtest (virtuel)', "L'argent fictif avec lequel tu fais tes backtests.")}
+        {field('reel', 'Argent en dépôt', "L'argent réellement déposé chez ton courtier : il s'affiche en haut du tableau de bord.")}
+        {FEATURES.backtest && field('backtest', 'Capital backtest (virtuel)', "L'argent fictif avec lequel tu fais tes backtests.")}
         <label className="f">Lot par défaut
           <input inputMode="decimal" placeholder="0,01" value={draft.lots} onChange={(e) => setDraft((d) => ({ ...d, lots: e.target.value }))}
             onBlur={commitLots} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }} />
@@ -81,13 +82,13 @@ export default function Settings({ state }) {
           <button className="btn" onClick={() => { download(`easyjournal-trades-${day()}.csv`, stringifyCSV(tradesToRows([...state.trades].sort((a, b) => (a.date < b.date ? -1 : 1)), s.customFields)), 'text/csv'); toast('CSV téléchargé.'); }}>Tous les trades (CSV)</button>
         </div>
         <h3>Données de démonstration</h3>
-        <p className="sub" style={{ marginBottom: 8 }}>60 trades fictifs (42 en backtest, 18 en réel) pour voir l'application remplie. Ils sont repérés et se suppriment sans toucher à tes vrais trades.</p>
+        <p className="sub" style={{ marginBottom: 8 }}>18 trades fictifs pour voir l'application remplie. Ils sont repérés et se suppriment sans toucher à tes vrais trades.</p>
         <div className="row">
           <button className="btn primary" onClick={loadDemoData}>Charger les données de démo</button>
           <button className="btn danger" disabled={!state.trades.some(isDemo)} onClick={async () => { const n = await deleteTradesWhere(isDemo); toast(`${n} trade(s) fictif(s) supprimé(s).`); }}>Supprimer les données de démo ({state.trades.filter(isDemo).length})</button>
         </div>
         <h3>Importer</h3>
-        <p className="sub" style={{ marginBottom: 8 }}>Journal Excel (.xlsx avec feuilles « Backtesting » et « Réel »), CSV ou sauvegarde JSON. Un aperçu s'affiche avant toute modification.</p>
+        <p className="sub" style={{ marginBottom: 8 }}>Journal Excel (.xlsx, feuille « Réel »), CSV ou sauvegarde JSON. Un aperçu s'affiche avant toute modification.</p>
         <input type="file" accept=".xlsx,.csv,.txt,.json" onChange={onFile} aria-label="Fichier à importer" />
         <h3>Zone dangereuse</h3>
         <button className="btn danger" onClick={() => { setConfirm(''); setWipe(true); }}>Effacer toutes mes données</button>

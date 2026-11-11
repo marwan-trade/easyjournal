@@ -9,7 +9,9 @@ import Analysis from './pages/Analysis.jsx';
 import Ideas from './pages/Ideas.jsx';
 import Settings from './pages/Settings.jsx';
 import AuthPage from './components/AuthPage.jsx';
-import { startAutoSync, useSyncStatus } from './sync.js';
+import ProfileMenu from './components/ProfileMenu.jsx';
+import { startAutoSync, useSyncStatus, signOut } from './sync.js';
+import { FEATURES } from './config.js';
 import { MODE_LABELS } from './core/domain/trade.js';
 
 const ROUTES = [
@@ -34,6 +36,8 @@ export default function App() {
   const [form, setForm] = useState(null); // { trade } ; trade = null → nouveau
   const [err, setErr] = useState(null);
   const [guest, setGuest] = useState(() => { try { return localStorage.getItem('easyjournal.guest') === '1'; } catch { return false; } });
+  const leaveGuest = () => { try { localStorage.removeItem('easyjournal.guest'); } catch { /* ignoré */ } setGuest(false); };
+  const logout = async () => { try { await signOut(); } catch (e) { console.error(e); } leaveGuest(); window.location.hash = '#/'; };
   const continueAsGuest = () => { try { localStorage.setItem('easyjournal.guest', '1'); } catch { /* ignoré */ } setGuest(true); };
 
   useEffect(() => { init().then(() => startAutoSync()).catch((e) => { console.error(e); setErr(e.message); }); }, []);
@@ -63,12 +67,13 @@ export default function App() {
         <main id="main" tabIndex={-1}>
           <div className="mobilebrand"><Logo size={26} /><span>EasyJournal</span></div>
           <header className="top">
-            <h1><small>Mode {MODE_LABELS[mode]} · {state.settings.currency}</small>{route.title}</h1>
+            <h1><small>{FEATURES.backtest ? `Mode ${MODE_LABELS[mode]} · ` : ''}{state.settings.currency}</small>{route.title}</h1>
             <div className="actions">
-              <div className="seg" role="group" aria-label="Mode">{['reel', 'backtest'].map((m) => <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => saveSettings({ mode: m })}>{MODE_LABELS[m]}</button>)}</div>
+              {FEATURES.backtest && <div className="seg" role="group" aria-label="Mode">{['reel', 'backtest'].map((m) => <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => saveSettings({ mode: m })}>{MODE_LABELS[m]}</button>)}</div>}
               {sync.configured && <a className="syncdot" href="#/settings" title={sync.signedIn ? (sync.status === 'error' ? sync.error : sync.status === 'offline' ? 'Hors ligne' : sync.status === 'syncing' ? 'Synchronisation…' : 'Synchronisé') : 'Non connecté : tes données restent sur cet appareil'}>
                 <i className={sync.signedIn ? sync.status : 'off'} aria-hidden="true" /><span className="sr">{sync.signedIn ? `Synchronisation : ${sync.status}` : 'Non connecté'}</span></a>}
               <button className="btn primary" onClick={openNew}>+ Nouveau trade</button>
+              <ProfileMenu email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} />
             </div>
           </header>
           <Page key={route.path + mode} state={state} onNew={openNew} onEdit={(trade) => setForm({ trade })} />

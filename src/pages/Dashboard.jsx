@@ -32,15 +32,21 @@ export default function Dashboard({ state, onNew, onEdit }) {
 
   return (
     <>
-      <section className="hero" aria-label="Capital et résultat">
-        <div className="card main" style={{ '--i': 0 }}>
-          <div className="k"><span>Solde actuel · {settings.mode === 'backtest' ? 'argent virtuel' : 'argent réel'}</span></div>
-          <div className="v"><CountUp value={balance} format={(v) => money(v, settings, { digits: 2 })} /></div>
-          <div className="sub">{cap > 0 ? `capital de départ + résultat net` : <>Capital non défini : <a href="#/settings">indique-le dans les Réglages</a></>}</div>
-        </div>
-        <div className="card" style={{ '--i': 1 }}><div className="k"><span>Capital de départ</span></div>
+      <section className="deposit" aria-label="Argent en dépôt" style={{ '--i': 0 }}>
+        <div>
+          <div className="k">Argent en dépôt</div>
           <div className="v">{cap > 0 ? <CountUp value={cap} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
-          <div className="sub">{settings.mode === 'backtest' ? 'argent virtuel mis en backtest' : 'argent mis sur le compte'}</div></div>
+          <div className="sub">{cap > 0 ? 'somme déposée sur ton compte de trading' : <>Pas encore défini : <a href="#/settings">indique-le dans les Réglages</a></>}</div>
+        </div>
+        <a className="btn" href="#/settings">Modifier</a>
+      </section>
+
+      <section className="hero" aria-label="Solde et résultat">
+        <div className="card main" style={{ '--i': 0 }}>
+          <div className="k"><span>Solde actuel</span></div>
+          <div className="v"><CountUp value={balance} format={(v) => money(v, settings, { digits: 2 })} /></div>
+          <div className="sub">{cap > 0 ? 'argent en dépôt + résultat net' : 'résultat net (dépôt non défini)'}</div>
+        </div>
         <div className="card" style={{ '--i': 2 }}><div className="k"><span>Résultat net</span>{pct !== null && <span className={`pct ${signClass(net)}`}>{formatNumber(pct, { digits: 1, sign: true })} %</span>}</div>
           <div className={`v ${signClass(s.money.total)}`}>{s.money.total === null ? '—' : <CountUp value={s.money.total} format={(v) => money(v, settings, { sign: true, digits: 2 })} />}</div>
           <div className="sub">{s.money.estimatedCount ? `dont ${s.money.estimatedCount} estimé(s) ≈` : `sur ${s.completed} trade(s)`}</div></div>

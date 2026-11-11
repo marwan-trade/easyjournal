@@ -6,6 +6,7 @@ import { parseCSV } from '../core/io/csv.js';
 import { workbookToTrades, rowsToTrades } from '../core/io/mapping.js';
 import { parseBackup } from '../core/io/json.js';
 import { importTrades, restoreBackup } from '../store.js';
+import { FEATURES } from '../config.js';
 import { compressImage } from '../core/io/images.js';
 
 /** Lit un fichier et prépare un aperçu. N'écrit rien avant la confirmation de l'utilisateur. */
@@ -13,7 +14,7 @@ export async function prepareImport(file, settings) {
   const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
   if (head[0] === 0x50 && head[1] === 0x4b) { // « PK » : un .xlsx est un ZIP
     const res = workbookToTrades(await readXlsx(await file.arrayBuffer()), { customFields: settings.customFields });
-    return { kind: 'trades', res, note: res.ignoredSheets.length ? `Feuilles ignorées : ${res.ignoredSheets.join(', ')} (seules « Backtesting » et « Réel » sont lues).` : '' };
+    return { kind: 'trades', res, note: res.ignoredSheets.length ? `Feuilles ignorées : ${res.ignoredSheets.join(', ')} (les feuilles « Réel » sont lues).` : '' };
   }
   const text = await file.text();
   if (file.name.toLowerCase().endsWith('.json') || text.trimStart().startsWith('{')) return { kind: 'backup', data: parseBackup(text) };
@@ -41,17 +42,20 @@ export default function ImportFlow({ prepared, onClose }) {
     );
   }
   const { res, note, askMode } = prepared;
-  const trades = askMode ? res.trades.map((t) => ({ ...t, mode })) : res.trades;
+  const all = askMode ? res.trades.map((t) => ({ ...t, mode })) : res.trades;
+  const keep = all.map((t, i) => i).filter((i) => FEATURES.backtest || all[i].mode !== 'backtest');
+  const trades = keep.map((i) => all[i]);
+  const skippedBt = all.length - trades.length;
   const counts = { reel: trades.filter((t) => t.mode === 'reel').length, backtest: trades.filter((t) => t.mode === 'backtest').length };
   const noPips = trades.filter((t) => (t.result === 'Gagnant' || t.result === 'Perdant') && t.pips === null).length;
-  const imgCount = (res.images ?? []).filter(Boolean).length;
+  const imgCount = keep.filter((i) => res.images?.[i]).length;
   const [progress, setProgress] = useState('');
   const go = async () => {
     setBusy(true);
     try {
       const withShots = [];
       for (let i = 0; i < trades.length; i++) {
-        const im = res.images?.[i];
+        const im = res.images?.[keep[i]];
         if (im) setProgress(`Images : ${withShots.filter((t) => t.screenshot).length + 1} / ${imgCount}`);
         let screenshot = '';
         if (im) { try { screenshot = await compressImage(im); } catch { /* image illisible : le trade est importé sans */ } }
@@ -68,8 +72,9 @@ export default function ImportFlow({ prepared, onClose }) {
       <button className="btn primary" disabled={busy || !trades.length} onClick={go}>{busy ? (progress || 'Import…') : `Importer ${trades.length} trade(s)`}</button></>}>
       {trades.length === 0 ? <p className="banner">{res.skipped[0]?.reason ?? 'Aucun trade lisible dans ce fichier.'}</p> : (
         <div className="set">
-          <p>{trades.length} trade(s) prêts : {counts.reel} en réel, {counts.backtest} en backtest.</p>
-          {askMode && <label className="f">Ce fichier ne précise pas le mode. Importer en :<select value={mode} onChange={(e) => setMode(e.target.value)}><option value="reel">Réel</option><option value="backtest">Backtest</option></select></label>}
+          <p>{FEATURES.backtest ? `${trades.length} trade(s) prêts : ${counts.reel} en réel, ${counts.backtest} en backtest.` : `${trades.length} trade(s) prêts à importer.`}</p>
+          {skippedBt > 0 && <p className="muted">{skippedBt} trade(s) de backtest ignoré(s) : le backtesting est désactivé pour l'instant.</p>}
+          {askMode && FEATURES.backtest && <label className="f">Ce fichier ne précise pas le mode. Importer en :<select value={mode} onChange={(e) => setMode(e.target.value)}><option value="reel">Réel</option><option value="backtest">Backtest</option></select></label>}
           {imgCount > 0 && <p>🖼 {imgCount} capture(s) d'écran détectée(s) : elles seront importées avec leur trade.</p>}
           {noPips > 0 && <p className="muted">{noPips} trade(s) terminé(s) sans pips (cellule vide dans ton fichier) : ils comptent dans les gagnants/perdants, mais l'argent ne peut pas être calculé. Tu pourras compléter les pips ensuite.</p>}
           {note && <p className="muted">{note}</p>}

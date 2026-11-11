@@ -205,7 +205,7 @@ body:has(dialog[open]) aside,body:has(dialog[open]) .tabbar{backdrop-filter:none
 .crash small{color:var(--muted)}
 
 /* ===== Solde et capital ===== */
-.hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+.hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
 .hero .card .v{font-size:2.1rem}
 .hero .card.main{background:linear-gradient(150deg,rgba(245,185,66,.16),var(--surface) 70%);border-color:rgba(245,185,66,.45);box-shadow:0 0 50px rgba(245,158,11,.12)}
 .hero .card.main .v{font-size:clamp(2.4rem,5vw,3.4rem);color:var(--gold);text-shadow:0 0 30px var(--glow);line-height:1.1}
@@ -218,3 +218,17 @@ body:has(dialog[open]) aside,body:has(dialog[open]) .tabbar{backdrop-filter:none
 .capform small{color:var(--muted);font-size:.78rem}
 
 td.bal{color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
+.deposit{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:22px 26px;margin-bottom:16px;border-radius:20px;border:1px solid rgba(245,185,66,.5);background:linear-gradient(120deg,rgba(245,185,66,.2),var(--surface) 75%);box-shadow:0 0 60px rgba(245,158,11,.14);animation:arise .6s both}
+.deposit .k{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.deposit .v{font-family:var(--serif);font-size:clamp(2.2rem,6vw,3.6rem);line-height:1.1;color:var(--gold);text-shadow:0 0 30px var(--glow);font-variant-numeric:tabular-nums}
+.deposit .sub{color:var(--muted);font-size:.9rem}.deposit a{color:var(--gold)}.deposit a.btn{color:inherit}
+/* menu profil */
+.profile{position:relative}
+.profile>button{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:inherit;border-radius:999px;padding:4px 12px 4px 4px;cursor:pointer;font-size:.88rem}
+.profile .av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--gold),var(--amber));color:#1a1204;font-weight:700;font-size:.85rem}
+.profile .menu{position:absolute;right:0;top:calc(100% + 8px);min-width:230px;z-index:30;background:#16120f;border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.profile .who{padding:8px 10px 10px;border-bottom:1px solid var(--line);margin-bottom:6px;font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
+.profile .menu a,.profile .menu button{display:block;width:100%;text-align:left;padding:9px 10px;border-radius:9px;border:0;background:none;color:inherit;font:inherit;cursor:pointer;text-decoration:none}
+.profile .menu a:hover,.profile .menu button:hover{background:rgba(245,185,66,.12)}
+.profile .menu .out{color:var(--loss)}
+@media(max-width:480px){.profile>button .nm{display:none}.profile>button{padding:4px}}

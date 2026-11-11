@@ -3,7 +3,7 @@ import Logo from './Logo.jsx';
 import { signIn, signUp } from '../sync.js';
 
 const FEATURES = [
-  ['◈', 'Journal clair', 'Réel et backtest séparés : pips, lots et argent calculés pour toi.'],
+  ['◈', 'Journal clair', 'Pips, lots et argent calculés pour toi, solde mis à jour après chaque trade.'],
   ['▥', 'Analyse précise', 'Taux de réussite, drawdown, séries et performance par setup.'],
   ['⟲', 'Partout avec toi', 'Tes trades synchronisés entre ordinateur et téléphone.'],
   ['✦', 'Discipline', 'Idées, notes et revue : ce qui fait progresser un trader.'],

@@ -1,3 +1,4 @@
+import { FEATURES } from '../../config.js';
 /** Réglages par défaut et fusion sûre avec ce qui est stocké (ajout de nouvelles clés sans rien casser). */
 
 export const SCHEMA_VERSION = 1;
@@ -36,7 +37,7 @@ export function mergeSettings(stored) {
       out[key] = val;
     }
   }
-  if (!['reel', 'backtest'].includes(out.mode)) out.mode = 'reel';
+  if (!['reel', 'backtest'].includes(out.mode) || !FEATURES.backtest) out.mode = 'reel';
   if (!['auto', 'light', 'dark'].includes(out.theme)) out.theme = 'auto';
   out.currency = String(out.currency || 'USD').toUpperCase().slice(0, 8);
   if (!(out.defaultLots >= 0)) out.defaultLots = DEFAULT_SETTINGS.defaultLots;
