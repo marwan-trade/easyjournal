@@ -205,7 +205,7 @@ body:has(dialog[open]) aside,body:has(dialog[open]) .tabbar{backdrop-filter:none
 .crash small{color:var(--muted)}
 
 /* ===== Solde et capital ===== */
-.hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+.hero{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-bottom:16px}
 .hero .card .v{font-size:2.1rem}
 .hero .card.main{background:linear-gradient(150deg,rgba(245,185,66,.16),var(--surface) 70%);border-color:rgba(245,185,66,.45);box-shadow:0 0 50px rgba(245,158,11,.12)}
 .hero .card.main .v{font-size:clamp(2.4rem,5vw,3.4rem);color:var(--gold);text-shadow:0 0 30px var(--glow);line-height:1.1}

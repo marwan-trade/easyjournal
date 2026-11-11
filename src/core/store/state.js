@@ -95,6 +95,8 @@ export async function importTrades(incoming, strategy = 'append') {
   const modes = new Set(incoming.map((t) => t.mode));
   let toAdd = incoming.map((t) => normalizeTrade({ ...t, id: newId() }));
   let attached = 0;
+  let updated = 0;
+  let touchedCount = 0;
   if (strategy === 'replace') {
     const removed = state.trades.filter((t) => modes.has(t.mode));
     await Promise.all(removed.map((t) => db.delete('trades', t.id)));
@@ -103,18 +105,29 @@ export async function importTrades(incoming, strategy = 'append') {
   } else {
     const existing = new Map(state.trades.map((t) => [dedupeKey(t), t]));
     const attach = [];
+    const stored = new Set(state.trades.map((t) => t.id));
     toAdd = toAdd.filter((t) => {
       const k = dedupeKey(t);
       const have = existing.get(k);
       if (have) {
         // Doublon : on ne le recrée pas, mais on lui ajoute la capture si elle lui manquait.
-        if (t.screenshot && !have.screenshot) { have.screenshot = t.screenshot; have.updatedAt = Date.now(); attach.push(have); }
+        let touched = false;
+        if (t.screenshot && !have.screenshot) { have.screenshot = t.screenshot; touched = true; attached += 1; }
+        // Le fichier fait foi : pips, lots, solde… renseignés dans le fichier complètent ou corrigent le trade déjà enregistré.
+        if (stored.has(have.id)) {
+          let changed = false;
+          for (const k of ['pips', 'lots', 'rr', 'risk', 'pnl', 'fees', 'balance']) {
+            if (t[k] !== null && t[k] !== undefined && t[k] !== have[k]) { have[k] = t[k]; changed = true; }
+          }
+          if (changed) { touched = true; updated += 1; }
+        }
+        if (touched) { have.updatedAt = Date.now(); attach.push(have); }
         return false;
       }
       existing.set(k, t);
       return true;
     });
-    if (attach.length) { await db.bulkPut('trades', attach); state.rev += 1; attached = attach.length; }
+    if (attach.length) { await db.bulkPut('trades', attach); state.rev += 1; touchedCount = attach.length; }
   }
   await db.bulkPut('trades', toAdd);
   state.trades.push(...toAdd);
@@ -129,7 +142,7 @@ export async function importTrades(incoming, strategy = 'append') {
   let scenarios = s.scenarios;
   for (const t of toAdd) scenarios = withSuggestion(scenarios, t.scenario);
   await saveSettings({ pairs, timeframes, scenarios });
-  return { added: toAdd.length, ignored: incoming.length - toAdd.length - attached, attached };
+  return { added: toAdd.length, ignored: incoming.length - toAdd.length - touchedCount, attached, updated };
 }
 
 /** Ajoute des trades tels quels (identifiants conservés) : données de démonstration. */

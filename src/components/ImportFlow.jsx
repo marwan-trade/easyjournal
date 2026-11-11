@@ -62,7 +62,7 @@ export default function ImportFlow({ prepared, onClose }) {
         withShots.push(screenshot ? { ...trades[i], screenshot } : trades[i]);
       }
       const r = await importTrades(withShots, strategy);
-      toast(`${r.added} trade(s) importé(s)${r.attached ? `, ${r.attached} capture(s) ajoutée(s) à des trades existants` : ''}${r.ignored ? `, ${r.ignored} doublon(s) ignoré(s)` : ''}.`);
+      toast(`${r.added} trade(s) importé(s)${r.updated ? `, ${r.updated} trade(s) existant(s) mis à jour (pips, lots, solde…)` : ''}${r.attached ? `, ${r.attached} capture(s) ajoutée(s) à des trades existants` : ''}${r.ignored ? `, ${r.ignored} doublon(s) ignoré(s)` : ''}.`);
       onClose();
     } catch (e) { setBusy(false); setProgress(''); toast(`Import impossible : ${e.message}`); }
   };

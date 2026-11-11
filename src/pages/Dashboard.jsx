@@ -19,10 +19,9 @@ export default function Dashboard({ state, onNew, onEdit }) {
   const tab = chosen ?? ['money', 'pips', 'outcome'].find((k) => s.curves[k === 'money' ? 'equity' : k].length > 1) ?? 'outcome';
   const setTab = setChosen;
   const dd = s.money.drawdown;
-  const net = s.money.total ?? 0;
   const real = realBalance(trades); // solde réel saisi par l'utilisateur (dernier trade qui en a un)
+  const net = s.money.total ?? 0;
   const balance = real ?? cap + net;
-  const pct = cap > 0 && s.money.total !== null ? (net / cap) * 100 : null;
   const fmtInt = (v) => formatNumber(v, { digits: 2 });
   const series = {
     money: { pts: s.curves.equity, fy: (v) => money(v, settings, { digits: 0 }), label: 'Capital' },
@@ -48,21 +47,18 @@ export default function Dashboard({ state, onNew, onEdit }) {
           <div className="v"><CountUp value={balance} format={(v) => money(v, settings, { digits: 2 })} /></div>
           <div className="sub">{real !== null ? 'dernier solde réel que tu as saisi' : cap > 0 ? 'estimation : argent en dépôt + gain estimé (saisis ton solde réel dans un trade)' : 'saisis ton solde réel dans un trade'}</div>
         </div>
-        <div className="card" style={{ '--i': 2 }}><div className="k"><span>Gain estimé</span>{pct !== null && <span className={`pct ${signClass(net)}`}>{formatNumber(pct, { digits: 1, sign: true })} %</span>}</div>
-          <div className={`v ${signClass(s.money.total)}`}>{s.money.total === null ? '—' : <CountUp value={s.money.total} format={(v) => money(v, settings, { sign: true, digits: 2 })} />}</div>
-          <div className="sub">{s.money.estimatedCount ? `dont ${s.money.estimatedCount} estimé(s) ≈` : `sur ${s.completed} trade(s)`}</div></div>
       </section>
 
       <section className="grid kpis">
         <div className="card" style={{ '--i': 1 }}><div className="k">Réussite</div>
           <div className="v">{s.winRate === null ? '—' : <CountUp value={s.winRate * 100} format={(v) => `${v.toFixed(1).replace('.', ',')} %`} />}</div>
           <div className="sub">{s.wins} gagnants · {s.losses} perdants</div></div>
-        <div className="card" style={{ '--i': 2 }}><div className="k">Total gagné</div>
-          <div className="v win">{s.money.total === null ? '—' : <CountUp value={s.money.grossWin} format={(v) => money(v, settings, { sign: true, digits: 2 })} />}</div>
-          <div className="sub">{s.wins} trade(s) gagnant(s)</div></div>
-        <div className="card" style={{ '--i': 2 }}><div className="k">Total perdu</div>
-          <div className="v loss">{s.money.total === null ? '—' : <CountUp value={-s.money.grossLoss} format={(v) => money(v, settings, { sign: true, digits: 2 })} />}</div>
-          <div className="sub">{s.losses} trade(s) perdant(s)</div></div>
+        <div className="card" style={{ '--i': 2 }}><div className="k">Trades gagnants</div>
+          <div className="v win"><CountUp value={s.wins} format={(v) => String(Math.round(v))} /></div>
+          <div className="sub">{s.money.total === null ? 'gain estimé : —' : `gain estimé ≈ ${money(s.money.grossWin, settings, { sign: true, digits: 2 })}`}</div></div>
+        <div className="card" style={{ '--i': 2 }}><div className="k">Trades perdants</div>
+          <div className="v loss"><CountUp value={s.losses} format={(v) => String(Math.round(v))} /></div>
+          <div className="sub">{s.money.total === null ? 'perte estimée : —' : `perte estimée ≈ ${money(-s.money.grossLoss, settings, { sign: true, digits: 2 })}`}</div></div>
         <div className="card" style={{ '--i': 2 }}><div className="k">Profit factor</div>
           <div className="v">{s.money.profitFactor === null ? '—' : s.money.profitFactor === Infinity ? '∞' : <CountUp value={s.money.profitFactor} format={fmtInt} />}</div>
           <div className="sub">gains ÷ pertes</div></div>
