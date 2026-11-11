@@ -34,7 +34,7 @@ export default function Dashboard({ state, onNew, onEdit }) {
       <section className="deposit" aria-label="Solde actuel" style={{ '--i': 0 }}>
         <div>
           <div className="k">Solde actuel</div>
-          <div className="v">{cap > 0 || s.money.total !== null ? <CountUp value={shown} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
+          <div className="v">{cap > 0 || s.money.total !== null ? money(shown, settings, { digits: 2 }) : '—'}</div>
           <div className="sub">{cap > 0 ? <>argent en dépôt {money(cap, settings, { digits: 2 })} · gains et pertes <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b>{s.money.estimatedCount ? ' (estimés ≈)' : ''}</> : <>Dépôt non défini : <a href="#/settings">indique-le dans les Réglages</a></>}</div>
         </div>
         <a className="btn" href="#/settings">Modifier le dépôt</a>
