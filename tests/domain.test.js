@@ -44,12 +44,12 @@ test('le signe vient du résultat', () => {
   assert.equal(applyResultSign(12, 'À égalité'), 12);
 });
 
-test('effectivePnl : lots × 10 × pips, signe selon le résultat', () => {
+test('effectivePnl : pips × lots × valeur du pip, signe selon le résultat', () => {
   const est = effectivePnl(mk({ result: 'Gagnant', pips: 40, lots: 0.5, fees: 2 }), settings);
   assert.deepEqual(est, { value: 200, estimated: true });
   assert.deepEqual(effectivePnl(mk({ result: 'Perdant', pips: 30, lots: 1 }), settings), { value: -300, estimated: true });
   const jpy = effectivePnl(mk({ pair: 'USDJPY', result: 'Gagnant', pips: 10, lots: 1 }), settings);
-  assert.equal(jpy.value, 100); // même formule pour toutes les paires
+  assert.equal(jpy.value, 65); // USDJPY : 6,5 $ par pip avec le taux de ces réglages de test
   assert.deepEqual(effectivePnl(mk({ result: 'Perdant', pnl: 80 }), settings), { value: -80, estimated: false }); // sans pips : ancien montant
   assert.equal(effectivePnl(mk({ result: 'Gagnant', pips: 40 }), { ...settings, defaultLots: 0 }), null);
 });
@@ -189,19 +189,19 @@ test('valeur du pip calculée selon la paire (compte en USD)', () => {
   assert.equal(pipValueInfo('EURUSD', { ...s, currency: 'EUR' }).source, 'défaut'); // compte en EUR sans taux : repli sans inventer
 });
 
-test('estimation de l\'argent : lots × 10 × pips', () => {
+test('estimation de l\'argent : pips × lots × valeur du pip de la paire', () => {
   const s = { currency: 'USD', defaultPipValue: 10, pipValues: {}, conversionRates: {} };
   const t = normalizeTrade({ date: '2026-01-05', pair: 'GBPUSD', result: 'Gagnant', pips: 45, lots: 0.2 });
   assert.equal(effectivePnl(t, s).value, 90);                              // 45 × 0,2 × 10
   const jpy = normalizeTrade({ date: '2026-01-05', pair: 'USDJPY', result: 'Perdant', pips: 30, lots: 0.5 });
-  assert.equal(effectivePnl(jpy, s).value, -150);                          // −30 × 0,5 × 10
+  assert.ok(Math.abs(effectivePnl(jpy, s).value + 100.5) < 0.01);          // −30 × 0,5 × 6,7
 });
 
 test('sans lots saisis : le lot par défaut des réglages sert à estimer l\'argent', () => {
   const settings = mergeSettings({});
   const t = normalizeTrade({ date: '2026-01-05', pair: 'AUDUSD', result: 'Gagnant', pips: 20.5 });
   const p = effectivePnl(t, settings);
-  assert.equal(Math.round(p.value * 1000) / 1000, 2.05); // 20,5 pips × 0,01 lot × 10
+  assert.equal(Math.round(p.value * 1000) / 1000, 2.05); // 20,5 pips × 0,01 lot × 10 $ (AUDUSD)
   assert.equal(p.estimated, true);
   assert.equal(effectivePnl(t, { ...settings, defaultLots: 0 }), null); // désactivé
   assert.equal(effectivePnl({ ...t, lots: 0.1 }, settings).value, 20.5 * 0.1 * 10); // des lots saisis priment

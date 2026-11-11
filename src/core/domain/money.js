@@ -1,5 +1,5 @@
 /**
- * Calculs d'argent. Le gain/perte est une ESTIMATION simple : lots × 10 × pips (signe selon le résultat).
+ * Calculs d'argent. Le gain/perte est une ESTIMATION : pips × lots × valeur du pip de la paire (10 $ pour EURUSD, ≈ 6,7 $ pour USDJPY…).
  * Le solde réel, lui, est saisi par l'utilisateur (champ `balance` du trade) : c'est lui qui fait foi.
  */
 import { applyResultSign, signedPips } from './trade.js';
@@ -51,18 +51,15 @@ export function pipValueInfo(pair, settings) {
 
 export const pipValueFor = (pair, settings) => pipValueInfo(pair, settings).value;
 
-/** Valeur d'un pip par lot dans la formule d'estimation : gain = lots × 10 × pips. */
-export const PIP_FACTOR = 10;
-
 /**
- * Gain / perte estimé d'un trade : lots × 10 × pips (positif si Gagnant, négatif si Perdant).
+ * Gain / perte estimé d'un trade : pips × lots × valeur du pip de la paire (positif si Gagnant, négatif si Perdant).
  * Sans lots saisis, on prend le lot par défaut des réglages. Sans pips, on retombe sur l'ancien montant saisi (pnl), s'il existe.
  * @returns {{value:number, estimated:boolean} | null}
  */
 export function effectivePnl(t, settings) {
   const pips = signedPips(t);
   const lots = t.lots > 0 ? t.lots : settings.defaultLots > 0 ? settings.defaultLots : null;
-  if (pips !== null && lots) return { value: pips * lots * PIP_FACTOR, estimated: true };
+  if (pips !== null && lots) return { value: pips * lots * pipValueFor(t.pair, settings), estimated: true };
   if (t.pnl !== null && t.pnl !== undefined) return { value: applyResultSign(t.pnl, t.result), estimated: false };
   return null;
 }

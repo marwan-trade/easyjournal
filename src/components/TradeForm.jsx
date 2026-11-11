@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Dialog from './Dialog.jsx';
 import { toast } from './toast.jsx';
 import { emptyTrade, normalizeTrade, validateTrade, RESULTS, SIDES, MODE_LABELS } from '../core/domain/trade.js';
-import { effectivePnl, PIP_FACTOR } from '../core/domain/money.js';
+import { effectivePnl, pipValueFor } from '../core/domain/money.js';
 import { money } from '../format.js';
 import { saveTrade, deleteTrade } from '../store.js';
 import ShotField from './ShotField.jsx';
@@ -65,7 +65,7 @@ export default function TradeForm({ trade, settings, onClose }) {
           <Field errors={errors} k="risk" label={`Risque (${settings.currency})`}><input inputMode="decimal" value={text(t.risk)} onChange={set('risk')} /></Field>
           <Field errors={errors} k="balance" label={`Solde réel après ce trade (${settings.currency})`}><input inputMode="decimal" value={text(t.balance)} onChange={set('balance')} placeholder="ce que ton compte affiche" /></Field>
           <Field errors={errors} k="fees" label={`Frais (${settings.currency})`}><input inputMode="decimal" value={text(t.fees)} onChange={set('fees')} /></Field>
-          <div className="wide est" aria-live="polite">{est ? <>Gain / perte estimé : <b>{est.estimated ? '≈ ' : ''}{money(est.value, settings, { sign: true })}</b>{est.estimated ? ` (${norm.lots > 0 ? norm.lots : settings.defaultLots} lot(s)${norm.lots > 0 ? '' : ' par défaut'} × ${PIP_FACTOR} × ${norm.pips} pips)` : ' (ancien montant saisi)'}</> : 'Saisis les pips (et les lots) pour voir le gain / perte estimé.'}
+          <div className="wide est" aria-live="polite">{est ? <>Gain / perte estimé : <b>{est.estimated ? '≈ ' : ''}{money(est.value, settings, { sign: true })}</b>{est.estimated ? ` (${norm.lots > 0 ? norm.lots : settings.defaultLots} lot(s)${norm.lots > 0 ? '' : ' par défaut'} × ${money(pipValueFor(norm.pair, settings), settings, { digits: 2 })} par pip × ${norm.pips} pips)` : ' (ancien montant saisi)'}</> : 'Saisis les pips (et les lots) pour voir le gain / perte estimé.'}
             <div className="sub" style={{ marginTop: 4 }}>Le solde réel, c'est toi qui le saisis : c'est lui qui s'affiche dans le grand bandeau.</div></div>
           <Field errors={errors} k="notes" label="Notes" wide><textarea value={t.notes} onChange={set('notes')} placeholder="Ce qui s'est passé, ce que tu as ressenti, ce que tu retiens…" /></Field>
           <div className="wide"><ShotField value={t.screenshot} onChange={(v) => setT((x) => ({ ...x, screenshot: v }))} onView={() => setViewing(true)} /></div>
