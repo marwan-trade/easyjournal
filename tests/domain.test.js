@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeTrade, validateTrade, parseNum, applyResultSign, isValidISODate } from '../src/core/domain/trade.js';
-import { effectivePnl, rMultiple, pipValueFor, formatMoney } from '../src/core/domain/money.js';
+import { effectivePnl, realBalance, rMultiple, pipValueFor, formatMoney } from '../src/core/domain/money.js';
 import { summarize, maxDrawdown, streaks, sortTrades } from '../src/core/domain/stats.js';
 import { mergeSettings } from '../src/core/store/settings.js';
 
@@ -44,14 +44,24 @@ test('le signe vient du résultat', () => {
   assert.equal(applyResultSign(12, 'À égalité'), 12);
 });
 
-test('effectivePnl : saisie réelle prioritaire, sinon estimation signalée', () => {
-  const manual = effectivePnl(mk({ result: 'Perdant', pnl: 80, pips: 30, lots: 1 }), settings);
-  assert.deepEqual(manual, { value: -80, estimated: false });
+test('effectivePnl : lots × 10 × pips, signe selon le résultat', () => {
   const est = effectivePnl(mk({ result: 'Gagnant', pips: 40, lots: 0.5, fees: 2 }), settings);
-  assert.deepEqual(est, { value: 40 * 0.5 * 10 - 2, estimated: true });
+  assert.deepEqual(est, { value: 200, estimated: true });
+  assert.deepEqual(effectivePnl(mk({ result: 'Perdant', pips: 30, lots: 1 }), settings), { value: -300, estimated: true });
   const jpy = effectivePnl(mk({ pair: 'USDJPY', result: 'Gagnant', pips: 10, lots: 1 }), settings);
-  assert.equal(jpy.value, 65);
-  assert.equal(effectivePnl(mk({ result: 'Gagnant', pips: 40 }), settings), null);
+  assert.equal(jpy.value, 100); // même formule pour toutes les paires
+  assert.deepEqual(effectivePnl(mk({ result: 'Perdant', pnl: 80 }), settings), { value: -80, estimated: false }); // sans pips : ancien montant
+  assert.equal(effectivePnl(mk({ result: 'Gagnant', pips: 40 }), { ...settings, defaultLots: 0 }), null);
+});
+
+test('realBalance : dernier solde saisi par l\'utilisateur', () => {
+  const a = mk({ date: '2026-02-01', balance: 100 });
+  const b = mk({ date: '2026-02-03', balance: 140 });
+  const c = mk({ date: '2026-02-05' }); // pas de solde saisi : ignoré
+  assert.equal(realBalance([a, c, b]), 140);
+  assert.equal(realBalance([c]), null);
+});
+test('valeur du pip par paire (réglages avancés)', () => {
   assert.equal(pipValueFor('EURUSD', settings), 10);
 });
 
@@ -179,19 +189,19 @@ test('valeur du pip calculée selon la paire (compte en USD)', () => {
   assert.equal(pipValueInfo('EURUSD', { ...s, currency: 'EUR' }).source, 'défaut'); // compte en EUR sans taux : repli sans inventer
 });
 
-test('estimation de l\'argent : pips × lots × valeur du pip − frais', () => {
+test('estimation de l\'argent : lots × 10 × pips', () => {
   const s = { currency: 'USD', defaultPipValue: 10, pipValues: {}, conversionRates: {} };
-  const t = normalizeTrade({ date: '2026-01-05', pair: 'GBPUSD', result: 'Gagnant', pips: 45, lots: 0.2, fees: 1 });
-  assert.equal(effectivePnl(t, s).value, 89);                              // 45 × 0,2 × 10 − 1
+  const t = normalizeTrade({ date: '2026-01-05', pair: 'GBPUSD', result: 'Gagnant', pips: 45, lots: 0.2 });
+  assert.equal(effectivePnl(t, s).value, 90);                              // 45 × 0,2 × 10
   const jpy = normalizeTrade({ date: '2026-01-05', pair: 'USDJPY', result: 'Perdant', pips: 30, lots: 0.5 });
-  assert.ok(Math.abs(effectivePnl(jpy, s).value + 100.5) < 0.01);          // −30 × 0,5 × 6,7
+  assert.equal(effectivePnl(jpy, s).value, -150);                          // −30 × 0,5 × 10
 });
 
 test('sans lots saisis : le lot par défaut des réglages sert à estimer l\'argent', () => {
   const settings = mergeSettings({});
   const t = normalizeTrade({ date: '2026-01-05', pair: 'AUDUSD', result: 'Gagnant', pips: 20.5 });
   const p = effectivePnl(t, settings);
-  assert.equal(Math.round(p.value * 100) / 100, 2.05); // 20,5 pips × 0,01 lot × 10 $
+  assert.equal(Math.round(p.value * 1000) / 1000, 2.05); // 20,5 pips × 0,01 lot × 10
   assert.equal(p.estimated, true);
   assert.equal(effectivePnl(t, { ...settings, defaultLots: 0 }), null); // désactivé
   assert.equal(effectivePnl({ ...t, lots: 0.1 }, settings).value, 20.5 * 0.1 * 10); // des lots saisis priment

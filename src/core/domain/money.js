@@ -1,7 +1,6 @@
 /**
- * Calculs d'argent. Principe : le résultat saisi par l'utilisateur (venu du courtier)
- * est la source de vérité. À défaut, on propose une ESTIMATION pips × lots × valeur du pip,
- * toujours signalée comme estimée.
+ * Calculs d'argent. Le gain/perte est une ESTIMATION simple : lots × 10 × pips (signe selon le résultat).
+ * Le solde réel, lui, est saisi par l'utilisateur (champ `balance` du trade) : c'est lui qui fait foi.
  */
 import { applyResultSign, signedPips } from './trade.js';
 
@@ -52,22 +51,30 @@ export function pipValueInfo(pair, settings) {
 
 export const pipValueFor = (pair, settings) => pipValueInfo(pair, settings).value;
 
+/** Valeur d'un pip par lot dans la formule d'estimation : gain = lots × 10 × pips. */
+export const PIP_FACTOR = 10;
+
 /**
- * Résultat net d'un trade.
+ * Gain / perte estimé d'un trade : lots × 10 × pips (positif si Gagnant, négatif si Perdant).
+ * Sans lots saisis, on prend le lot par défaut des réglages. Sans pips, on retombe sur l'ancien montant saisi (pnl), s'il existe.
  * @returns {{value:number, estimated:boolean} | null}
  */
 export function effectivePnl(t, settings) {
-  if (t.pnl !== null && t.pnl !== undefined) {
-    return { value: applyResultSign(t.pnl, t.result), estimated: false };
-  }
   const pips = signedPips(t);
-  // Sans lots saisis, on prend le lot par défaut des réglages (comme la case « Lot par défaut » du cahier Excel).
   const lots = t.lots > 0 ? t.lots : settings.defaultLots > 0 ? settings.defaultLots : null;
-  if (pips !== null && lots) {
-    const gross = pips * lots * pipValueFor(t.pair, settings);
-    return { value: gross - (t.fees ?? 0), estimated: true };
-  }
+  if (pips !== null && lots) return { value: pips * lots * PIP_FACTOR, estimated: true };
+  if (t.pnl !== null && t.pnl !== undefined) return { value: applyResultSign(t.pnl, t.result), estimated: false };
   return null;
+}
+
+/** Solde réel actuel : le dernier solde saisi par l'utilisateur (trade le plus récent qui en a un), sinon null. */
+export function realBalance(trades) {
+  let best = null;
+  for (const t of trades) {
+    if (t.balance === null || t.balance === undefined) continue;
+    if (!best || t.date > best.date || (t.date === best.date && t.createdAt > best.createdAt)) best = t;
+  }
+  return best ? best.balance : null;
 }
 
 /** Multiple de R : résultat net / risque pris. Null si risque inconnu ou nul. */

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Dialog from './Dialog.jsx';
 import { toast } from './toast.jsx';
 import { emptyTrade, normalizeTrade, validateTrade, RESULTS, SIDES, MODE_LABELS } from '../core/domain/trade.js';
-import { effectivePnl, pipValueInfo } from '../core/domain/money.js';
+import { effectivePnl, PIP_FACTOR } from '../core/domain/money.js';
 import { money } from '../format.js';
 import { saveTrade, deleteTrade } from '../store.js';
 import ShotField from './ShotField.jsx';
@@ -25,7 +25,6 @@ export default function TradeForm({ trade, settings, onClose }) {
   const set = (k) => (e) => setT((x) => ({ ...x, [k]: e.target.value }));
   const norm = useMemo(() => normalizeTrade({ ...t, tags: t.tags }), [t]);
   const est = effectivePnl(norm, settings);
-  const pv = norm.pair ? pipValueInfo(norm.pair, settings) : null;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -64,10 +63,10 @@ export default function TradeForm({ trade, settings, onClose }) {
           <Field errors={errors} k="lots" label="Lots"><input inputMode="decimal" value={text(t.lots)} onChange={set('lots')} placeholder={String(settings.defaultLots).replace('.', ',')} /></Field>
           <Field errors={errors} k="pips" label="Pips"><input inputMode="decimal" value={text(t.pips)} onChange={set('pips')} placeholder="45" /></Field>
           <Field errors={errors} k="risk" label={`Risque (${settings.currency})`}><input inputMode="decimal" value={text(t.risk)} onChange={set('risk')} /></Field>
-          <Field errors={errors} k="pnl" label={`Résultat net (${settings.currency})`}><input inputMode="decimal" value={text(t.pnl)} onChange={set('pnl')} placeholder="vide = estimation" /></Field>
+          <Field errors={errors} k="balance" label={`Solde réel après ce trade (${settings.currency})`}><input inputMode="decimal" value={text(t.balance)} onChange={set('balance')} placeholder="ce que ton compte affiche" /></Field>
           <Field errors={errors} k="fees" label={`Frais (${settings.currency})`}><input inputMode="decimal" value={text(t.fees)} onChange={set('fees')} /></Field>
-          <div className="wide est" aria-live="polite">{est ? <>Résultat pris en compte : <b>{est.estimated ? '≈ ' : ''}{money(est.value, settings, { sign: true })}</b>{est.estimated ? ` : ${norm.pips} pips × ${norm.lots > 0 ? norm.lots : settings.defaultLots} lot(s)${norm.lots > 0 ? '' : ' (lot par défaut)'} × ${money(pv.value, settings, { digits: 2 })} par pip${norm.fees ? ' − frais' : ''}` : ' (saisi)'}</> : 'Saisis les pips et les lots : le résultat est calculé tout seul. Ou saisis directement le résultat net de ton courtier.'}
-            {pv && est?.estimated && <div className="sub" style={{ marginTop: 4 }}>Valeur du pip pour 1 lot sur {norm.pair} : {money(pv.value, settings, { digits: 2 })} ({pv.source === 'manuel' ? 'fixée par toi dans les réglages' : pv.source === 'calculé' ? 'calculée d\'après la devise de la paire' : 'valeur par défaut : cette paire n\'est pas une paire de devises'}).</div>}</div>
+          <div className="wide est" aria-live="polite">{est ? <>Gain / perte estimé : <b>{est.estimated ? '≈ ' : ''}{money(est.value, settings, { sign: true })}</b>{est.estimated ? ` (${norm.lots > 0 ? norm.lots : settings.defaultLots} lot(s)${norm.lots > 0 ? '' : ' par défaut'} × ${PIP_FACTOR} × ${norm.pips} pips)` : ' (ancien montant saisi)'}</> : 'Saisis les pips (et les lots) pour voir le gain / perte estimé.'}
+            <div className="sub" style={{ marginTop: 4 }}>Le solde réel, c'est toi qui le saisis : c'est lui qui s'affiche dans le grand bandeau.</div></div>
           <Field errors={errors} k="notes" label="Notes" wide><textarea value={t.notes} onChange={set('notes')} placeholder="Ce qui s'est passé, ce que tu as ressenti, ce que tu retiens…" /></Field>
           <div className="wide"><ShotField value={t.screenshot} onChange={(v) => setT((x) => ({ ...x, screenshot: v }))} onView={() => setViewing(true)} /></div>
           <Field errors={errors} k="tags" label="Étiquettes (séparées par des virgules)" wide><input value={tagsValue} onChange={(e) => setT((x) => ({ ...x, tags: e.target.value }))} /></Field>

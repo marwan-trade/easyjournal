@@ -54,7 +54,8 @@ export function emptyTrade(mode = 'reel') {
     pips: null,
     lots: null,
     risk: null, // montant risqué
-    pnl: null, // gain/perte net saisi (null = non saisi)
+    pnl: null, // ancien montant saisi (conservé pour les anciens trades)
+    balance: null, // solde RÉEL du compte après ce trade, saisi par l'utilisateur
     fees: null,
     notes: '',
     tags: [],
@@ -80,7 +81,7 @@ export function normalizeTrade(raw, defaults = {}) {
   t.timeframe = str(t.timeframe);
   t.result = RESULTS.includes(str(t.result)) ? str(t.result) : '';
   t.rulesFollowed = t.rulesFollowed === true ? true : t.rulesFollowed === false ? false : null;
-  for (const k of ['rr', 'pips', 'lots', 'risk', 'pnl', 'fees']) t[k] = parseNum(t[k]);
+  for (const k of ['rr', 'pips', 'lots', 'risk', 'pnl', 'fees', 'balance']) t[k] = parseNum(t[k]);
   t.notes = str(t.notes);
   t.tags = Array.isArray(t.tags)
     ? t.tags.map(str).filter(Boolean)

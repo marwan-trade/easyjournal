@@ -26,6 +26,7 @@ const ALIASES = {
   lots: ['lots', 'lot'],
   risk: ['risque', 'risk'],
   pnl: ['resultatnet', 'gainperte', 'gainpertenet', 'pnl', 'profit'],
+  balance: ['solde', 'soldereel', 'soldereelasaisir', 'balance'],
   fees: ['frais', 'fees', 'commission'],
   tags: ['etiquettes', 'tags'],
   notes: ['notes', 'note', 'commentaire'],
@@ -33,7 +34,7 @@ const ALIASES = {
 
 export const EXPORT_HEADERS = [
   'Mode', 'Date', 'Paire', 'Scénario', 'Sens', 'Timeframe', 'Résultat', 'Règles respectées',
-  'RR prévu', 'Pips', 'Lots', 'Risque', 'Résultat net', 'Frais', 'Étiquettes', 'Notes',
+  'RR prévu', 'Pips', 'Lots', 'Risque', 'Résultat net', 'Solde réel', 'Frais', 'Étiquettes', 'Notes',
 ];
 
 export function modeFromText(v) {
@@ -187,6 +188,7 @@ export function rowsToTrades(rows, { mode = null, customFields = [], images = []
         lots: cell('lots'),
         risk: cell('risk'),
         pnl: cell('pnl'),
+        balance: cell('balance'),
         fees: cell('fees'),
         tags: cell('tags') ?? '',
         notes: cell('notes') ?? '',
@@ -218,7 +220,7 @@ export function tradesToRows(trades, customFields = []) {
     t.mode === 'backtest' ? 'Backtest' : 'Réel',
     t.date, t.pair, t.scenario, t.side, t.timeframe, t.result,
     t.rulesFollowed === true ? 'Oui' : t.rulesFollowed === false ? 'Non' : '',
-    t.rr, t.pips, t.lots, t.risk, t.pnl, t.fees,
+    t.rr, t.pips, t.lots, t.risk, t.pnl, t.balance, t.fees,
     t.tags.join(', '), t.notes,
     ...customFields.map((c) => t.custom?.[c.key] ?? ''),
   ]);

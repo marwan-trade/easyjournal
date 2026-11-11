@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { tradesOf } from '../store.js';
-import { effectivePnl } from '../core/domain/money.js';
-import { summarize, equityCurve } from '../core/domain/stats.js';
-import { compareTrades } from '../core/domain/trade.js';
+import { effectivePnl, realBalance } from '../core/domain/money.js';
+import { summarize } from '../core/domain/stats.js';
 import { money, signClass, shortDate, formatNumber } from '../format.js';
 import { ResultPill, Empty, pipsText } from '../components/shared.jsx';
 import ShotViewer from '../components/ShotViewer.jsx';
@@ -24,11 +23,9 @@ export default function Journal({ state, onNew, onEdit }) {
     && (!q || `${t.notes} ${t.tags.join(' ')} ${t.pair} ${t.timeframe} ${t.scenario}`.toLowerCase().includes(q)))
     .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1));
 
-  // Solde après chaque trade : calculé sur TOUS les trades du mode affiché (filtres sans effet), avec le capital de ce mode seulement.
+  // Solde : valeur RÉELLE saisie par l'utilisateur pour chaque trade (— si non saisie).
   const cap = settings.initialCapital[settings.mode] || 0;
-  const curve = equityCurve([...all].sort(compareTrades), settings, cap);
-  const balanceOf = new Map(curve.map((pt) => [pt.trade.id, pt.value]));
-  const currentBalance = curve.length ? curve[curve.length - 1].value : cap;
+  const currentBalance = realBalance(all) ?? cap;
   const sum = summarize(rows, settings);
   const lots = rows.reduce((a, t) => a + (t.lots ?? 0), 0);
 
@@ -53,13 +50,13 @@ export default function Journal({ state, onNew, onEdit }) {
       </div>
       <p className="muted" aria-live="polite">{rows.length} trade(s) affiché(s) sur {all.length}{sum.open ? ` · ${sum.open} en cours` : ''}{sum.money.estimatedCount ? ` · ${sum.money.estimatedCount} montant(s) estimé(s) ≈` : ''}</p>
       {rows.length === 0 ? <p className="muted" style={{ padding: '16px 0' }}>Aucun trade ne correspond à ces filtres. <button className="btn" onClick={() => setF(EMPTY)}>Réinitialiser</button></p> : (
-        <div className="tablewrap"><table><thead><tr><th>Date</th><th>Paire</th><th>Sens</th><th>Scénario</th><th>Confirmation</th><th>Résultat</th><th className="num">Lots</th><th className="num">Pips</th><th className="num">Net</th><th className="num">Solde</th><th aria-label="Capture"></th></tr></thead><tbody>
+        <div className="tablewrap"><table><thead><tr><th>Date</th><th>Paire</th><th>Sens</th><th>Scénario</th><th>Confirmation</th><th>Résultat</th><th className="num">Lots</th><th className="num">Pips</th><th className="num">Gain estimé</th><th className="num">Solde</th><th aria-label="Capture"></th></tr></thead><tbody>
           {rows.map((t) => { const p = effectivePnl(t, settings); return (
             <tr key={t.id} tabIndex={0} onClick={() => onEdit(t)} onKeyDown={(e) => e.key === 'Enter' && onEdit(t)}>
               <td>{shortDate(t.date)}</td><td>{t.pair}</td><td>{t.side || '—'}</td><td>{t.scenario || '—'}</td><td>{t.timeframe || '—'}</td>
               <td><ResultPill result={t.result} /></td><td className="num">{t.lots ?? '—'}</td><td className="num">{pipsText(t)}</td>
               <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td>
-              <td className="num bal">{balanceOf.has(t.id) ? money(balanceOf.get(t.id), settings, { digits: 2 }) : '—'}</td>
+              <td className="num bal">{t.balance === null || t.balance === undefined ? '—' : money(t.balance, settings, { digits: 2 })}</td>
               <td className="shotcell">{t.screenshot && <button type="button" className="shotbtn" title="Voir la capture" aria-label={`Voir la capture du trade ${t.pair} du ${t.date}`} onClick={(e) => { e.stopPropagation(); setShot(t); }}>▣</button>}</td></tr>); })}
         </tbody>
           <tfoot><tr>

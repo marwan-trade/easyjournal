@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { tradesOf } from '../store.js';
 import { summarize } from '../core/domain/stats.js';
-import { effectivePnl } from '../core/domain/money.js';
+import { effectivePnl, realBalance } from '../core/domain/money.js';
 import { money, signClass, formatNumber, formatPercent, shortDate } from '../format.js';
 import CountUp from '../components/CountUp.jsx';
 import LineChart from '../components/LineChart.jsx';
@@ -20,7 +20,8 @@ export default function Dashboard({ state, onNew, onEdit }) {
   const setTab = setChosen;
   const dd = s.money.drawdown;
   const net = s.money.total ?? 0;
-  const balance = cap + net;
+  const real = realBalance(trades); // solde réel saisi par l'utilisateur (dernier trade qui en a un)
+  const balance = real ?? cap + net;
   const pct = cap > 0 && s.money.total !== null ? (net / cap) * 100 : null;
   const fmtInt = (v) => formatNumber(v, { digits: 2 });
   const series = {
@@ -43,11 +44,11 @@ export default function Dashboard({ state, onNew, onEdit }) {
 
       <section className="hero" aria-label="Solde et résultat">
         <div className="card main" style={{ '--i': 0 }}>
-          <div className="k"><span>Solde actuel</span></div>
+          <div className="k"><span>Solde actuel{real !== null ? ' · réel' : ''}</span></div>
           <div className="v"><CountUp value={balance} format={(v) => money(v, settings, { digits: 2 })} /></div>
-          <div className="sub">{cap > 0 ? 'argent en dépôt + résultat net' : 'résultat net (dépôt non défini)'}</div>
+          <div className="sub">{real !== null ? 'dernier solde réel que tu as saisi' : cap > 0 ? 'estimation : argent en dépôt + gain estimé (saisis ton solde réel dans un trade)' : 'saisis ton solde réel dans un trade'}</div>
         </div>
-        <div className="card" style={{ '--i': 2 }}><div className="k"><span>Résultat net</span>{pct !== null && <span className={`pct ${signClass(net)}`}>{formatNumber(pct, { digits: 1, sign: true })} %</span>}</div>
+        <div className="card" style={{ '--i': 2 }}><div className="k"><span>Gain estimé</span>{pct !== null && <span className={`pct ${signClass(net)}`}>{formatNumber(pct, { digits: 1, sign: true })} %</span>}</div>
           <div className={`v ${signClass(s.money.total)}`}>{s.money.total === null ? '—' : <CountUp value={s.money.total} format={(v) => money(v, settings, { sign: true, digits: 2 })} />}</div>
           <div className="sub">{s.money.estimatedCount ? `dont ${s.money.estimatedCount} estimé(s) ≈` : `sur ${s.completed} trade(s)`}</div></div>
       </section>
