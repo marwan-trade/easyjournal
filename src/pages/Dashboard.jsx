@@ -20,8 +20,7 @@ export default function Dashboard({ state, onNew, onEdit }) {
   const setTab = setChosen;
   const dd = s.money.drawdown;
   const real = realBalance(trades); // solde réel saisi par l'utilisateur (dernier trade qui en a un)
-  const net = s.money.total ?? 0;
-  const balance = real ?? cap + net;
+  const shown = real ?? cap; // le grand bandeau suit ton solde réel dès que tu en as saisi un
   const fmtInt = (v) => formatNumber(v, { digits: 2 });
   const series = {
     money: { pts: s.curves.equity, fy: (v) => money(v, settings, { digits: 0 }), label: 'Capital' },
@@ -35,18 +34,10 @@ export default function Dashboard({ state, onNew, onEdit }) {
       <section className="deposit" aria-label="Argent en dépôt" style={{ '--i': 0 }}>
         <div>
           <div className="k">Argent en dépôt</div>
-          <div className="v">{cap > 0 ? <CountUp value={cap} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
-          <div className="sub">{cap > 0 ? 'somme déposée sur ton compte de trading' : <>Pas encore défini : <a href="#/settings">indique-le dans les Réglages</a></>}</div>
+          <div className="v">{shown > 0 || real !== null ? <CountUp value={shown} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
+          <div className="sub">{real !== null ? <>solde réel à ton dernier trade{cap > 0 ? ` · dépôt de départ ${money(cap, settings, { digits: 2 })}` : ''}</> : cap > 0 ? 'somme déposée sur ton compte de trading (saisis ton solde réel dans un trade pour le suivre)' : <>Pas encore défini : <a href="#/settings">indique-le dans les Réglages</a></>}</div>
         </div>
         <a className="btn" href="#/settings">Modifier</a>
-      </section>
-
-      <section className="hero" aria-label="Solde et résultat">
-        <div className="card main" style={{ '--i': 0 }}>
-          <div className="k"><span>Solde actuel{real !== null ? ' · réel' : ''}</span></div>
-          <div className="v"><CountUp value={balance} format={(v) => money(v, settings, { digits: 2 })} /></div>
-          <div className="sub">{real !== null ? 'dernier solde réel que tu as saisi' : cap > 0 ? 'estimation : argent en dépôt + gain estimé (saisis ton solde réel dans un trade)' : 'saisis ton solde réel dans un trade'}</div>
-        </div>
       </section>
 
       <section className="grid kpis">
