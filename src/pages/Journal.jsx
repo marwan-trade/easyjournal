@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { tradesOf } from '../store.js';
-import { effectivePnl, realBalance } from '../core/domain/money.js';
-import { summarize } from '../core/domain/stats.js';
+import { effectivePnl } from '../core/domain/money.js';
+import { compareTrades } from '../core/domain/trade.js';
+import { summarize, equityCurve } from '../core/domain/stats.js';
 import { money, signClass, shortDate, formatNumber } from '../format.js';
 import { ResultPill, Empty, pipsText } from '../components/shared.jsx';
 import ShotViewer from '../components/ShotViewer.jsx';
@@ -23,9 +24,11 @@ export default function Journal({ state, onNew, onEdit }) {
     && (!q || `${t.notes} ${t.tags.join(' ')} ${t.pair} ${t.timeframe} ${t.scenario}`.toLowerCase().includes(q)))
     .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1));
 
-  // Solde : valeur RÉELLE saisie par l'utilisateur pour chaque trade (— si non saisie).
+  // Solde après chaque trade : dépôt + gains − pertes, calculé sur TOUS les trades (les filtres n'y changent rien).
   const cap = settings.initialCapital[settings.mode] || 0;
-  const currentBalance = realBalance(all) ?? cap;
+  const curve = equityCurve([...all].sort(compareTrades), settings, cap);
+  const balanceOf = new Map(curve.map((pt) => [pt.trade.id, pt.value]));
+  const currentBalance = curve.length ? curve[curve.length - 1].value : cap;
   const sum = summarize(rows, settings);
   const lots = rows.reduce((a, t) => a + (t.lots ?? 0), 0);
 
@@ -56,7 +59,7 @@ export default function Journal({ state, onNew, onEdit }) {
               <td>{shortDate(t.date)}</td><td>{t.pair}</td><td>{t.side || '—'}</td><td>{t.scenario || '—'}</td><td>{t.timeframe || '—'}</td>
               <td><ResultPill result={t.result} /></td><td className="num">{t.lots ?? '—'}</td><td className="num">{pipsText(t)}</td>
               <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td>
-              <td className="num bal">{t.balance === null || t.balance === undefined ? '—' : money(t.balance, settings, { digits: 2 })}</td>
+              <td className="num bal">{balanceOf.has(t.id) ? money(balanceOf.get(t.id), settings, { digits: 2 }) : '—'}</td>
               <td className="shotcell">{t.screenshot && <button type="button" className="shotbtn" title="Voir la capture" aria-label={`Voir la capture du trade ${t.pair} du ${t.date}`} onClick={(e) => { e.stopPropagation(); setShot(t); }}>▣</button>}</td></tr>); })}
         </tbody>
           <tfoot><tr>

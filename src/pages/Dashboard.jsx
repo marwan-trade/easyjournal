@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { tradesOf } from '../store.js';
 import { summarize } from '../core/domain/stats.js';
-import { effectivePnl, realBalance } from '../core/domain/money.js';
+import { effectivePnl } from '../core/domain/money.js';
 import { money, signClass, formatNumber, formatPercent, shortDate } from '../format.js';
 import CountUp from '../components/CountUp.jsx';
 import LineChart from '../components/LineChart.jsx';
@@ -19,8 +19,8 @@ export default function Dashboard({ state, onNew, onEdit }) {
   const tab = chosen ?? ['money', 'pips', 'outcome'].find((k) => s.curves[k === 'money' ? 'equity' : k].length > 1) ?? 'outcome';
   const setTab = setChosen;
   const dd = s.money.drawdown;
-  const real = realBalance(trades); // solde réel saisi par l'utilisateur (dernier trade qui en a un)
-  const shown = real ?? cap; // le grand bandeau suit ton solde réel dès que tu en as saisi un
+  const net = s.money.total ?? 0; // gains moins pertes (estimés)
+  const shown = cap + net; // solde actuel = dépôt + gains − pertes
   const fmtInt = (v) => formatNumber(v, { digits: 2 });
   const series = {
     money: { pts: s.curves.equity, fy: (v) => money(v, settings, { digits: 0 }), label: 'Capital' },
@@ -31,13 +31,13 @@ export default function Dashboard({ state, onNew, onEdit }) {
 
   return (
     <>
-      <section className="deposit" aria-label="Argent en dépôt" style={{ '--i': 0 }}>
+      <section className="deposit" aria-label="Solde actuel" style={{ '--i': 0 }}>
         <div>
-          <div className="k">Argent en dépôt</div>
-          <div className="v">{shown > 0 || real !== null ? <CountUp value={shown} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
-          <div className="sub">{real !== null ? <>solde réel à ton dernier trade{cap > 0 ? ` · dépôt de départ ${money(cap, settings, { digits: 2 })}` : ''}</> : cap > 0 ? 'somme déposée sur ton compte de trading (saisis ton solde réel dans un trade pour le suivre)' : <>Pas encore défini : <a href="#/settings">indique-le dans les Réglages</a></>}</div>
+          <div className="k">Solde actuel</div>
+          <div className="v">{cap > 0 || s.money.total !== null ? <CountUp value={shown} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
+          <div className="sub">{cap > 0 ? <>argent en dépôt {money(cap, settings, { digits: 2 })} · gains et pertes <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b>{s.money.estimatedCount ? ' (estimés ≈)' : ''}</> : <>Dépôt non défini : <a href="#/settings">indique-le dans les Réglages</a></>}</div>
         </div>
-        <a className="btn" href="#/settings">Modifier</a>
+        <a className="btn" href="#/settings">Modifier le dépôt</a>
       </section>
 
       <section className="grid kpis">
