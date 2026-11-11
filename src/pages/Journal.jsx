@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { tradesOf } from '../store.js';
-import { effectivePnl, realBalance } from '../core/domain/money.js';
+import { effectivePnl, realBalance, realAmount } from '../core/domain/money.js';
 import { summarize } from '../core/domain/stats.js';
 import { money, signClass, shortDate, formatNumber } from '../format.js';
 import { ResultPill, Empty, pipsText } from '../components/shared.jsx';
@@ -24,7 +24,7 @@ export default function Journal({ state, onNew, onEdit }) {
     .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1));
 
   // Colonne Solde : la valeur réelle que tu saisis pour chaque trade (comme dans l'Excel).
-  const currentBalance = realBalance(all);
+  const currentBalance = realBalance(all, settings.initialCapital[settings.mode] || 0);
   const sum = summarize(rows, settings);
   const lots = rows.reduce((a, t) => a + (t.lots ?? 0), 0);
 
@@ -60,7 +60,7 @@ export default function Journal({ state, onNew, onEdit }) {
               <td className="num">{t.rr ? `1:${formatNumber(t.rr, { digits: 2 })}` : '—'}</td>
               <td className="num">{pipsText(t)}</td><td className="num">{t.lots ?? '—'}</td>
               <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td>
-              <td className="num bal">{t.balance === null || t.balance === undefined ? '—' : money(t.balance, settings, { digits: 2 })}</td></tr>); })}
+              <td className="num bal">{realAmount(t) === null ? '—' : money(realAmount(t), settings, { sign: true, digits: 2 })}</td></tr>); })}
         </tbody>
           <tfoot><tr>
             <td colSpan={5}><b>Total · {rows.length} trade(s)</b></td>
@@ -69,7 +69,7 @@ export default function Journal({ state, onNew, onEdit }) {
             <td className={`num ${signClass(sum.pips.total)}`}>{formatNumber(sum.pips.total, { sign: true })}</td>
             <td className="num">{formatNumber(lots, { digits: 2 })}</td>
             <td className={`num ${signClass(sum.money.total)}`}><b>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td>
-            <td className="num bal" title="Dernier solde réel saisi"><b>{currentBalance === null ? '—' : money(currentBalance, settings, { digits: 2 })}</b></td>
+            <td className="num bal" title="Argent actuel"><b>{money(currentBalance, settings, { digits: 2 })}</b></td>
           </tr></tfoot></table></div>
       )}
       {shot && <ShotViewer trade={shot} list={rows.filter((t) => t.screenshot)} onChange={setShot} onClose={() => setShot(null)} />}

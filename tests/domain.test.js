@@ -54,12 +54,12 @@ test('effectivePnl : pips × lots × valeur du pip, signe selon le résultat', (
   assert.equal(effectivePnl(mk({ result: 'Gagnant', pips: 40 }), { ...settings, defaultLots: 0 }), null);
 });
 
-test('realBalance : dernier solde saisi par l\'utilisateur', () => {
-  const a = mk({ date: '2026-02-01', balance: 100 });
-  const b = mk({ date: '2026-02-03', balance: 140 });
-  const c = mk({ date: '2026-02-05' }); // pas de solde saisi : ignoré
-  assert.equal(realBalance([a, c, b]), 140);
-  assert.equal(realBalance([c]), null);
+test('realBalance : dépôt + montant des gagnants − montant des perdants (comme l\'Excel)', () => {
+  const a = mk({ date: '2026-02-01', result: 'Gagnant', balance: 2.11 });
+  const b = mk({ date: '2026-02-03', result: 'Perdant', balance: 1 });
+  const c = mk({ date: '2026-02-05', result: 'Gagnant' }); // pas de montant saisi : ignoré
+  assert.ok(Math.abs(realBalance([a, c, b], 12.58) - 13.69) < 1e-9);   // 12,58 + 2,11 − 1
+  assert.equal(realBalance([c], 12.58), 12.58);
 });
 test('valeur du pip par paire (réglages avancés)', () => {
   assert.equal(pipValueFor('EURUSD', settings), 10);

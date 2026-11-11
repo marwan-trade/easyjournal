@@ -55,7 +55,7 @@ export function emptyTrade(mode = 'reel') {
     lots: null,
     risk: null, // montant risqué
     pnl: null, // ancien montant saisi (conservé pour les anciens trades)
-    balance: null, // solde RÉEL du compte après ce trade, saisi par l'utilisateur
+    balance: null, // colonne « Solde réel » : MONTANT réel gagné ou perdu saisi (ex. 2,11) ; argent actuel = dépôt ± ces montants
     fees: null,
     notes: '',
     tags: [],
@@ -102,7 +102,7 @@ export function validateTrade(t) {
   if (t.rr !== null && t.rr <= 0) errors.rr = 'Le RR doit être supérieur à 0.';
   if (t.risk !== null && t.risk < 0) errors.risk = 'Le risque ne peut pas être négatif.';
   if (t.fees !== null && t.fees < 0) errors.fees = 'Les frais ne peuvent pas être négatifs.';
-  if ((t.result === 'Gagnant' || t.result === 'Perdant') && (t.balance === null || t.balance === undefined)) errors.balance = 'Le solde réel est obligatoire pour un trade gagnant ou perdant.';
+  if ((t.result === 'Gagnant' || t.result === 'Perdant') && (t.balance === null || t.balance === undefined)) errors.balance = 'Le solde réel (montant gagné ou perdu) est obligatoire pour un trade gagnant ou perdant.';
   return { ok: Object.keys(errors).length === 0, errors };
 }
 

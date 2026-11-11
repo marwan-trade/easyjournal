@@ -19,9 +19,8 @@ export default function Dashboard({ state, onNew, onEdit }) {
   const tab = chosen ?? ['money', 'pips', 'outcome'].find((k) => s.curves[k === 'money' ? 'equity' : k].length > 1) ?? 'outcome';
   const setTab = setChosen;
   const dd = s.money.drawdown;
-  const real = realBalance(trades); // dernier solde réel saisi dans le Journal
-  const net = real !== null ? real - cap : 0; // gains et pertes RÉELS depuis le dépôt
-  const shown = real ?? cap; // solde actuel = ton dernier solde réel, sinon le dépôt
+  const shown = realBalance(trades, cap); // argent actuel = dépôt + gains − pertes réels (même calcul que l'Excel)
+  const net = shown - cap;
   const fmtInt = (v) => formatNumber(v, { digits: 2 });
   const series = {
     money: { pts: s.curves.equity, fy: (v) => money(v, settings, { digits: 0 }), label: 'Capital' },
@@ -32,11 +31,11 @@ export default function Dashboard({ state, onNew, onEdit }) {
 
   return (
     <>
-      <section className="deposit" aria-label="Solde actuel" style={{ '--i': 0 }}>
+      <section className="deposit" aria-label="Argent actuel" style={{ '--i': 0 }}>
         <div>
-          <div className="k">Solde actuel</div>
-          <div className="v">{cap > 0 || real !== null ? money(shown, settings, { digits: 2 }) : '—'}</div>
-          <div className="sub">{cap > 0 ? <>argent en dépôt {money(cap, settings, { digits: 2 })} · gains et pertes <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b>{real === null ? ' · saisis ton solde réel dans le Journal' : ''}</> : <>Dépôt non défini : <a href="#/settings">indique-le dans les Réglages</a></>}</div>
+          <div className="k">Argent actuel</div>
+          <div className="v">{money(shown, settings, { digits: 2 })}</div>
+          <div className="sub">argent mis sur le compte {money(cap, settings, { digits: 2 })} · gagné / perdu <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b></div>
         </div>
         <a className="btn" href="#/settings">Modifier le dépôt</a>
       </section>

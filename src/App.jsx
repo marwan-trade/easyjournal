@@ -9,6 +9,7 @@ import Analysis from './pages/Analysis.jsx';
 import Ideas from './pages/Ideas.jsx';
 import Settings from './pages/Settings.jsx';
 import AuthPage from './components/AuthPage.jsx';
+import DepositGate from './components/DepositGate.jsx';
 import ProfileMenu from './components/ProfileMenu.jsx';
 import { startAutoSync, useSyncStatus, signOut } from './sync.js';
 import { FEATURES } from './config.js';
@@ -53,6 +54,8 @@ export default function App() {
   if (!state.ready) return null;
   if (sync.configured && !sync.signedIn && !guest) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><AuthPage onGuest={continueAsGuest} /><Toasts /></>;
   const mode = state.settings.mode;
+  const needsDeposit = !((state.settings.initialCapital[mode] || 0) > 0); // sans dépôt, impossible de calculer le solde actuel
+  if (needsDeposit) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><DepositGate settings={state.settings} onGuestLogout={sync.signedIn ? logout : null} /><Toasts /></>;
 
   return (
     <>

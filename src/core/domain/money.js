@@ -64,14 +64,20 @@ export function effectivePnl(t, settings) {
   return null;
 }
 
-/** Solde réel actuel : le dernier solde saisi par l'utilisateur (trade le plus récent qui en a un), sinon null. */
-export function realBalance(trades) {
-  let best = null;
-  for (const t of trades) {
-    if (t.balance === null || t.balance === undefined) continue;
-    if (!best || t.date > best.date || (t.date === best.date && t.createdAt > best.createdAt)) best = t;
-  }
-  return best ? best.balance : null;
+/**
+ * Montant réel gagné ou perdu d'un trade : la valeur saisie dans « Solde réel », signée selon le résultat
+ * (Gagnant = +, Perdant = −). null si rien n'est saisi.
+ */
+export function realAmount(t) {
+  if (t.balance === null || t.balance === undefined) return null;
+  return applyResultSign(t.balance, t.result);
+}
+
+/** Argent actuel (comme la case « Argent actuel » de l'Excel) : dépôt + solde réel des gagnants − solde réel des perdants. */
+export function realBalance(trades, deposit = 0) {
+  let total = deposit;
+  for (const t of trades) { const a = realAmount(t); if (a !== null) total += a; }
+  return Math.round(total * 1e8) / 1e8;
 }
 
 /** Multiple de R : résultat net / risque pris. Null si risque inconnu ou nul. */
