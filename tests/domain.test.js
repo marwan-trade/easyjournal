@@ -206,3 +206,11 @@ test('sans lots saisis : le lot par défaut des réglages sert à estimer l\'arg
   assert.equal(effectivePnl(t, { ...settings, defaultLots: 0 }), null); // désactivé
   assert.equal(effectivePnl({ ...t, lots: 0.1 }, settings).value, 20.5 * 0.1 * 10); // des lots saisis priment
 });
+
+test('validateTrade : le solde réel est obligatoire pour un trade gagnant ou perdant', () => {
+  assert.ok(validateTrade(mk({ result: 'Gagnant' })).errors.balance);
+  assert.ok(validateTrade(mk({ result: 'Perdant', balance: null })).errors.balance);
+  assert.equal(validateTrade(mk({ result: 'Gagnant', balance: 14.5 })).ok, true);
+  assert.equal(validateTrade(mk({ result: '' })).ok, true);          // trade en cours : pas de solde exigé
+  assert.equal(validateTrade(mk({ result: 'À égalité' })).ok, true);
+});
