@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { tradesOf } from '../store.js';
-import { effectivePnl } from '../core/domain/money.js';
-import { compareTrades } from '../core/domain/trade.js';
-import { summarize, equityCurve } from '../core/domain/stats.js';
+import { effectivePnl, realBalance } from '../core/domain/money.js';
+import { summarize } from '../core/domain/stats.js';
 import { money, signClass, shortDate, formatNumber } from '../format.js';
 import { ResultPill, Empty, pipsText } from '../components/shared.jsx';
 import ShotViewer from '../components/ShotViewer.jsx';
@@ -24,11 +23,8 @@ export default function Journal({ state, onNew, onEdit }) {
     && (!q || `${t.notes} ${t.tags.join(' ')} ${t.pair} ${t.timeframe} ${t.scenario}`.toLowerCase().includes(q)))
     .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1));
 
-  // Solde après chaque trade : dépôt + gains − pertes, calculé sur TOUS les trades (les filtres n'y changent rien).
-  const cap = settings.initialCapital[settings.mode] || 0;
-  const curve = equityCurve([...all].sort(compareTrades), settings, cap);
-  const balanceOf = new Map(curve.map((pt) => [pt.trade.id, pt.value]));
-  const currentBalance = curve.length ? curve[curve.length - 1].value : cap;
+  // Colonne Solde : la valeur réelle que tu saisis pour chaque trade (comme dans l'Excel).
+  const currentBalance = realBalance(all);
   const sum = summarize(rows, settings);
   const lots = rows.reduce((a, t) => a + (t.lots ?? 0), 0);
 
@@ -53,21 +49,27 @@ export default function Journal({ state, onNew, onEdit }) {
       </div>
       <p className="muted" aria-live="polite">{rows.length} trade(s) affiché(s) sur {all.length}{sum.open ? ` · ${sum.open} en cours` : ''}{sum.money.estimatedCount ? ` · ${sum.money.estimatedCount} montant(s) estimé(s) ≈` : ''}</p>
       {rows.length === 0 ? <p className="muted" style={{ padding: '16px 0' }}>Aucun trade ne correspond à ces filtres. <button className="btn" onClick={() => setF(EMPTY)}>Réinitialiser</button></p> : (
-        <div className="tablewrap"><table><thead><tr><th>Date</th><th>Paire</th><th>Sens</th><th>Scénario</th><th>Confirmation</th><th>Résultat</th><th className="num">Lots</th><th className="num">Pips</th><th className="num">Gain estimé</th><th className="num">Solde</th><th aria-label="Capture"></th></tr></thead><tbody>
+        <div className="tablewrap"><table className="jtable"><thead><tr><th>Date</th><th>Paire</th><th>Scénario</th><th>Sens</th><th>Timeframe de confirmation</th><th>Résultat</th><th>Règles respectées ?</th><th aria-label="Capture du graphique">Repère du graphique</th><th>Notes</th><th className="num">RR prévu</th><th className="num">Pips gagnés</th><th className="num">Lots</th><th className="num">Gain / perte estimé ($)</th><th className="num">Solde réel ($)</th></tr></thead><tbody>
           {rows.map((t) => { const p = effectivePnl(t, settings); return (
             <tr key={t.id} tabIndex={0} onClick={() => onEdit(t)} onKeyDown={(e) => e.key === 'Enter' && onEdit(t)}>
-              <td>{shortDate(t.date)}</td><td>{t.pair}</td><td>{t.side || '—'}</td><td>{t.scenario || '—'}</td><td>{t.timeframe || '—'}</td>
-              <td><ResultPill result={t.result} /></td><td className="num">{t.lots ?? '—'}</td><td className="num">{pipsText(t)}</td>
+              <td>{shortDate(t.date)}</td><td>{t.pair}</td><td>{t.scenario || '—'}</td><td>{t.side || '—'}</td><td>{t.timeframe || '—'}</td>
+              <td><ResultPill result={t.result} /></td>
+              <td>{t.rulesFollowed === true ? 'Oui' : t.rulesFollowed === false ? 'Non' : '—'}</td>
+              <td className="shotcell">{t.screenshot ? <button type="button" className="shotbtn" title="Voir la capture" aria-label={`Voir la capture du trade ${t.pair} du ${t.date}`} onClick={(e) => { e.stopPropagation(); setShot(t); }}>▣</button> : '—'}</td>
+              <td className="notes" title={t.notes}>{t.notes || '—'}</td>
+              <td className="num">{t.rr ? `1:${formatNumber(t.rr, { digits: 2 })}` : '—'}</td>
+              <td className="num">{pipsText(t)}</td><td className="num">{t.lots ?? '—'}</td>
               <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td>
-              <td className="num bal">{balanceOf.has(t.id) ? money(balanceOf.get(t.id), settings, { digits: 2 }) : '—'}</td>
-              <td className="shotcell">{t.screenshot && <button type="button" className="shotbtn" title="Voir la capture" aria-label={`Voir la capture du trade ${t.pair} du ${t.date}`} onClick={(e) => { e.stopPropagation(); setShot(t); }}>▣</button>}</td></tr>); })}
+              <td className="num bal">{t.balance === null || t.balance === undefined ? '—' : money(t.balance, settings, { digits: 2 })}</td></tr>); })}
         </tbody>
           <tfoot><tr>
             <td colSpan={5}><b>Total · {rows.length} trade(s)</b></td>
             <td><span className="win">{sum.wins} G</span> · <span className="loss">{sum.losses} P</span></td>
-            <td className="num">{formatNumber(lots, { digits: 2 })}</td>
+            <td colSpan={4} />
             <td className={`num ${signClass(sum.pips.total)}`}>{formatNumber(sum.pips.total, { sign: true })}</td>
-            <td className={`num ${signClass(sum.money.total)}`}><b>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td><td className="num bal" title={`Solde actuel ${settings.mode === 'backtest' ? 'backtest (virtuel)' : 'réel'}`}><b>{money(currentBalance, settings, { digits: 2 })}</b></td><td />
+            <td className="num">{formatNumber(lots, { digits: 2 })}</td>
+            <td className={`num ${signClass(sum.money.total)}`}><b>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td>
+            <td className="num bal" title="Dernier solde réel saisi"><b>{currentBalance === null ? '—' : money(currentBalance, settings, { digits: 2 })}</b></td>
           </tr></tfoot></table></div>
       )}
       {shot && <ShotViewer trade={shot} list={rows.filter((t) => t.screenshot)} onChange={setShot} onClose={() => setShot(null)} />}

@@ -232,3 +232,5 @@ td.bal{color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
 .profile .menu a:hover,.profile .menu button:hover{background:rgba(245,185,66,.12)}
 .profile .menu .out{color:var(--loss)}
 @media(max-width:480px){.profile>button .nm{display:none}.profile>button{padding:4px}}
+.jtable td.notes{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.jtable th{white-space:nowrap}
