@@ -6,7 +6,7 @@ import { toast } from './toast.jsx';
 
 export async function loadDemoData() {
   const n = await addTradesRaw(demoTrades());
-  toast(n ? `${n} trades fictifs ajoutés. Tu pourras les supprimer dans Réglages.` : 'Les données de démo sont déjà chargées.');
+  toast(n ? `${n} trades fictifs ajoutés. Tu pourras les supprimer dans ton profil.` : 'Les données de démo sont déjà chargées.');
 }
 
 export const ResultPill = ({ result }) => {

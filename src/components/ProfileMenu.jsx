@@ -14,13 +14,13 @@ export default function ProfileMenu({ email, signedIn, onSignOut, onSignIn }) {
   const initial = (signedIn && email ? email[0] : 'I').toUpperCase();
   return (
     <div className="profile" ref={ref}>
-      <button type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <span className="av" aria-hidden="true">{initial}</span><span className="nm">Profil</span>
+      <button type="button" aria-label="Profil" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="av" aria-hidden="true">{initial}</span>
       </button>
       {open && (
         <div className="menu" role="menu">
           <div className="who">{signedIn ? email : 'Mode invité : données sur cet appareil'}</div>
-          <a role="menuitem" href="#/settings" onClick={() => setOpen(false)}>⚙ Menu et réglages</a>
+          <a role="menuitem" href="#/profile" onClick={() => setOpen(false)}>◉ Mon profil et réglages</a>
           {signedIn
             ? <button role="menuitem" className="out" onClick={() => { setOpen(false); onSignOut(); }}>Déconnexion</button>
             : <button role="menuitem" onClick={() => { setOpen(false); onSignIn(); }}>Se connecter</button>}

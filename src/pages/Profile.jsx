@@ -11,6 +11,7 @@ import { toast } from '../components/toast.jsx';
 import SyncPanel from '../components/SyncPanel.jsx';
 import { MODE_LABELS } from '../core/domain/trade.js';
 import { FEATURES } from '../config.js';
+import { useSyncStatus } from '../sync.js';
 
 function download(name, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
@@ -60,8 +61,11 @@ function CapitalCard({ settings: s }) {
   );
 }
 
-export default function Settings({ state }) {
+export default function Profile({ state }) {
   const { settings: s } = state;
+  const sync = useSyncStatus();
+  const initial = (sync.signedIn && sync.email ? sync.email[0] : 'I').toUpperCase();
+  const status = !sync.configured ? 'Données sur cet appareil' : !sync.signedIn ? 'Non connecté' : sync.status === 'error' ? 'Erreur de synchronisation' : sync.status === 'offline' ? 'Hors ligne' : sync.status === 'syncing' ? 'Synchronisation…' : 'Synchronisé';
   const [prepared, setPrepared] = useState(null);
   const [wipe, setWipe] = useState(false);
   const [confirm, setConfirm] = useState('');
@@ -72,9 +76,16 @@ export default function Settings({ state }) {
   };
   return (
     <div className="set">
-      <SyncPanel />
+      <section className="card phero" style={{ '--i': 0 }}>
+        <span className="av big" aria-hidden="true">{initial}</span>
+        <div><h2>{sync.signedIn && sync.email ? sync.email : 'Mode invité'}</h2><p className="sub">{status} · tous les réglages de ta plateforme sont ici.</p></div>
+        <nav className="pnav" aria-label="Sections du profil">{[['sec-compte', 'Compte'], ['sec-capital', 'Dépôt et lot'], ['sec-donnees', 'Données']].map(([id, l]) => <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{l}</button>)}</nav>
+      </section>
+      <div id="sec-compte"><SyncPanel /></div>
+      <div id="sec-capital">
       <CapitalCard settings={s} />
-      <section className="card" style={{ '--i': 1 }}>
+      </div>
+      <section className="card" id="sec-donnees" style={{ '--i': 1 }}>
         <h2>Données</h2>
         <p className="sub" style={{ margin: '4px 0 12px' }}>{state.persistent ? 'Tes trades sont enregistrés dans ce navigateur. Fais une sauvegarde régulière.' : 'Attention : stockage permanent indisponible (navigation privée ?). Exporte une sauvegarde.'}</p>
         <div className="row">
@@ -93,7 +104,7 @@ export default function Settings({ state }) {
         <h3>Zone dangereuse</h3>
         <button className="btn danger" onClick={() => { setConfirm(''); setWipe(true); }}>Effacer toutes mes données</button>
       </section>
-      <p className="muted" style={{ textAlign: 'center' }}>EasyJournal v0.2 · données stockées sur cet appareil</p>
+      <p className="muted" style={{ textAlign: 'center' }}>EasyJournal v0.3</p>
       {prepared && <ImportFlow prepared={prepared} onClose={() => setPrepared(null)} />}
       {wipe && (
         <Dialog title="Effacer toutes les données ?" onClose={() => setWipe(false)} footer={<>

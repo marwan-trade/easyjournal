@@ -29,28 +29,29 @@ export default function Journal({ state, onNew, onEdit }) {
   const sum = summarize(rows, settings);
   const lots = rows.reduce((a, t) => a + (t.lots ?? 0), 0);
 
-  if (all.length === 0) return <Empty title="Ton journal est vide" text="Ajoute un trade, ou importe ton Excel depuis les réglages." action="Ajouter un trade" onAction={onNew} demo />;
+  if (all.length === 0) return <Empty title="Ton journal est vide" text="Ajoute un trade, ou importe ton Excel depuis ton profil." action="Ajouter un trade" onAction={onNew} demo />;
   return (
-    <div className="card" style={{ '--i': 0 }}>
-      <div className="filters">
-        <input type="search" placeholder="Rechercher…" aria-label="Rechercher" value={f.q} onChange={set('q')} />
+    <div className="card flat jcard" style={{ '--i': 0 }}>
+      <div className="jbar">
+        <input type="search" className="grow" placeholder="Rechercher (notes, paire, tag…)" aria-label="Rechercher" value={f.q} onChange={set('q')} />
         <select aria-label="Paire" value={f.pair} onChange={set('pair')}><option value="">Toutes les paires</option>{pairs.map((p) => <option key={p}>{p}</option>)}</select>
         <select aria-label="Scénario" value={f.scenario} onChange={set('scenario')}><option value="">Tous les scénarios</option>{scenarios.map((p) => <option key={p}>{p}</option>)}</select>
         <select aria-label="Résultat" value={f.result} onChange={set('result')}><option value="">Tous les résultats</option><option>Gagnant</option><option>Perdant</option><option>À égalité</option><option value="__open">En cours</option></select>
-        <input type="date" aria-label="Du" value={f.from} onChange={set('from')} />
-        <input type="date" aria-label="Au" value={f.to} onChange={set('to')} />
+        <span className="range"><input type="date" aria-label="Du" value={f.from} onChange={set('from')} /><i aria-hidden="true">→</i><input type="date" aria-label="Au" value={f.to} onChange={set('to')} /></span>
+        {JSON.stringify(f) !== JSON.stringify(EMPTY) && <button type="button" className="btn" onClick={() => setF(EMPTY)}>Réinitialiser</button>}
       </div>
-      <div className="totals" aria-label="Totaux des trades affichés">
-        <div><span className="k">Gagnants</span><b className="win">{sum.wins}</b></div>
-        <div><span className="k">Perdants</span><b className="loss">{sum.losses}</b></div>
-        <div><span className="k">Total gagné</span><b className="win">{cap0 ? '—' : money(sum.money.grossWin, settings, { sign: true })}</b></div>
-        <div><span className="k">Total perdu</span><b className="loss">{cap0 ? '—' : money(-sum.money.grossLoss, settings, { sign: true })}</b></div>
-        <div><span className="k">Net</span><b className={signClass(sum.money.total)}>{cap0 || sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></div>
-        <div><span className="k">Pips</span><b className={signClass(sum.pips.total)}>{formatNumber(sum.pips.total, { sign: true })}</b></div>
-      </div>
-      <p className="muted" aria-live="polite">{rows.length} trade(s) affiché(s) sur {all.length}{sum.open ? ` · ${sum.open} en cours` : ''}{sum.money.estimatedCount ? ` · ${sum.money.estimatedCount} montant(s) estimé(s) ≈` : ''}</p>
+      <dl className="jstats" aria-label="Totaux des trades affichés">
+        <div><dt>Trades</dt><dd>{rows.length}<small> / {all.length}</small></dd></div>
+        <div><dt>Gagnants</dt><dd className="win">{sum.wins}</dd></div>
+        <div><dt>Perdants</dt><dd className="loss">{sum.losses}</dd></div>
+        <div><dt>Pips</dt><dd className={signClass(sum.pips.total)}>{formatNumber(sum.pips.total, { sign: true })}</dd></div>
+        {!cap0 && <div><dt>Total gagné</dt><dd className="win">{money(sum.money.grossWin, settings, { sign: true })}</dd></div>}
+        {!cap0 && <div><dt>Total perdu</dt><dd className="loss">{money(-sum.money.grossLoss, settings, { sign: true })}</dd></div>}
+        {!cap0 && sum.money.total !== null && <div><dt>Net</dt><dd className={signClass(sum.money.total)}>{money(sum.money.total, settings, { sign: true })}</dd></div>}
+      </dl>
+      <p className="muted jnote" aria-live="polite">{sum.open ? `${sum.open} en cours` : ''}{sum.open && sum.money.estimatedCount && !cap0 ? ' · ' : ''}{sum.money.estimatedCount && !cap0 ? `${sum.money.estimatedCount} montant(s) estimé(s) ≈` : ''}</p>
       {rows.length === 0 ? <p className="muted" style={{ padding: '16px 0' }}>Aucun trade ne correspond à ces filtres. <button className="btn" onClick={() => setF(EMPTY)}>Réinitialiser</button></p> : (
-        <div className="tablewrap"><table className="jtable"><thead><tr><th>Date</th><th>Paire</th><th>Scénario</th><th>Sens</th><th>Timeframe de confirmation</th><th>Résultat</th><th>Règles respectées ?</th><th aria-label="Capture du graphique">Repère du graphique</th><th>Notes</th><th className="num">RR prévu</th><th className="num">Pips gagnés</th><th className="num">Lots</th><th className="num">Gain / perte estimé ($)</th><th className="num">Solde réel ($)</th></tr></thead><tbody>
+        <div className="tablewrap jscroll"><table className="jtable"><thead><tr><th>Date</th><th>Paire</th><th>Scénario</th><th>Sens</th><th>Timeframe</th><th>Résultat</th><th>Règles</th><th aria-label="Capture du graphique">Graphique</th><th>Notes</th><th className="num">RR</th><th className="num">Pips</th><th className="num">Lots</th><th className="num">Estimé</th><th className="num">Solde réel</th></tr></thead><tbody>
           {rows.map((t) => { const p = effectivePnl(t, settings); return (
             <tr key={t.id} tabIndex={0} onClick={() => onEdit(t)} onKeyDown={(e) => e.key === 'Enter' && onEdit(t)}>
               <td>{shortDate(t.date)}</td><td>{t.pair}</td><td>{t.scenario || '—'}</td><td>{t.side || '—'}</td><td>{t.timeframe || '—'}</td>
@@ -60,8 +61,8 @@ export default function Journal({ state, onNew, onEdit }) {
               <td className="notes" title={t.notes}>{t.notes || '—'}</td>
               <td className="num">{t.rr ? `1:${formatNumber(t.rr, { digits: 2 })}` : '—'}</td>
               <td className="num">{pipsText(t)}</td><td className="num">{t.lots ?? '—'}</td>
-              <td className={`num ${signClass(p?.value)}`}>{p ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td>
-              <td className="num bal">{realAmount(t) === null ? '—' : money(realAmount(t), settings, { sign: true, digits: 2 })}</td></tr>); })}
+              <td className={`num ${signClass(p?.value)}`}>{p && !cap0 ? `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}` : '—'}</td>
+              <td className="num bal">{cap0 || realAmount(t) === null ? '—' : money(realAmount(t), settings, { sign: true, digits: 2 })}</td></tr>); })}
         </tbody>
           <tfoot><tr>
             <td colSpan={5}><b>Total · {rows.length} trade(s)</b></td>
@@ -69,7 +70,7 @@ export default function Journal({ state, onNew, onEdit }) {
             <td colSpan={4} />
             <td className={`num ${signClass(sum.pips.total)}`}>{formatNumber(sum.pips.total, { sign: true })}</td>
             <td className="num">{formatNumber(lots, { digits: 2 })}</td>
-            <td className={`num ${signClass(sum.money.total)}`}><b>{sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td>
+            <td className={`num ${signClass(sum.money.total)}`}><b>{cap0 || sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td>
             <td className="num bal" title="Argent actuel"><b>{cap0 ? '—' : money(currentBalance, settings, { digits: 2 })}</b></td>
           </tr></tfoot></table></div>
       )}
