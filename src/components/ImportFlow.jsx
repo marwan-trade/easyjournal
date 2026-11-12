@@ -28,7 +28,7 @@ export default function ImportFlow({ prepared, onClose }) {
   const [strategy, setStrategy] = useState('append');
   const [mode, setMode] = useState('reel');
   const [busy, setBusy] = useState(false);
-  const [useSummary, setUseSummary] = useState(true);
+  const [overwrite, setOverwrite] = useState(false); // remplacer MES dépôts/lot par ceux du fichier (jamais par défaut)
   const [withBt, setWithBt] = useState(true); // importer aussi le backtesting du fichier (ouvre l'interface Backtesting)
 
   if (prepared.kind === 'backup') {
@@ -52,7 +52,16 @@ export default function ImportFlow({ prepared, onClose }) {
   const noPips = trades.filter((t) => (t.result === 'Gagnant' || t.result === 'Perdant') && t.pips === null).length;
   const sum = res.summary ?? { deposit: null, backtestDeposit: null, defaultLots: null };
   const importsBt = counts.backtest > 0 || (btOn && sum.backtestDeposit);
-  const hasSum = !!(sum.deposit || sum.defaultLots || (importsBt && sum.backtestDeposit));
+  const cur = state.settings;
+  // Réglages lus dans le Résumé de l'Excel. Un dépôt (ou lot) déjà écrit à la main n'est JAMAIS écrasé sans ton accord.
+  const items = [
+    { key: 'reel', label: 'dépôt réel', val: sum.deposit, now: cur.initialCapital.reel || 0, fmt: (v) => `${String(v).replace('.', ',')} $` },
+    { key: 'backtest', label: 'dépôt backtesting', val: importsBt ? sum.backtestDeposit : null, now: cur.initialCapital.backtest || 0, fmt: (v) => `${String(v).replace('.', ',')} $` },
+    { key: 'lots', label: 'lot par défaut', val: sum.defaultLots, now: cur.defaultLots === 0.01 ? 0 : cur.defaultLots, fmt: (v) => String(v) },
+  ].filter((i) => i.val && (i.key !== 'lots' || i.val !== cur.defaultLots));
+  const conflicts = items.filter((i) => i.now > 0 && i.now !== i.val);
+  const toApply = items.filter((i) => !(i.now > 0) || i.now === i.val || overwrite);
+  const hasSum = toApply.length > 0;
   const imgCount = keep.filter((i) => res.images?.[i]).length;
   const [progress, setProgress] = useState('');
   const go = async () => {
@@ -68,15 +77,12 @@ export default function ImportFlow({ prepared, onClose }) {
       }
       const r = await importTrades(withShots, strategy);
       const openBt = counts.backtest > 0 && !state.settings.backtest;
-      if (useSummary && (sum.deposit || sum.defaultLots || (importsBt && sum.backtestDeposit)) || openBt) {
+      if (toApply.length || openBt) {
         const patch = {};
         if (openBt) patch.backtest = true; // des trades de backtest ont été importés : l'interface Backtesting s'ouvre
-        if (useSummary && (sum.deposit || (importsBt && sum.backtestDeposit))) {
-          patch.initialCapital = { ...state.settings.initialCapital };
-          if (sum.deposit) patch.initialCapital.reel = sum.deposit;
-          if (importsBt && sum.backtestDeposit) patch.initialCapital.backtest = sum.backtestDeposit;
-        }
-        if (useSummary && sum.defaultLots) patch.defaultLots = sum.defaultLots;
+        const cap = { ...state.settings.initialCapital };
+        for (const i of toApply) { if (i.key === 'lots') patch.defaultLots = i.val; else cap[i.key] = i.val; }
+        if (toApply.some((i) => i.key !== 'lots')) patch.initialCapital = cap;
         await saveSettings(patch);
       }
       toast(`${r.added} trade(s) importé(s)${r.updated ? `, ${r.updated} trade(s) existant(s) mis à jour (pips, lots, solde…)` : ''}${r.attached ? `, ${r.attached} capture(s) ajoutée(s) à des trades existants` : ''}${r.ignored ? `, ${r.ignored} doublon(s) ignoré(s)` : ''}.`);
@@ -95,7 +101,8 @@ export default function ImportFlow({ prepared, onClose }) {
           {imgCount > 0 && <p>🖼 {imgCount} capture(s) d'écran détectée(s) : elles seront importées avec leur trade.</p>}
           {noPips > 0 && <p className="muted">{noPips} trade(s) terminé(s) sans pips (cellule vide dans ton fichier) : ils comptent dans les gagnants/perdants, mais l'argent ne peut pas être calculé. Tu pourras compléter les pips ensuite.</p>}
           {note && <p className="muted">{note}</p>}
-          {hasSum && <label style={{ display: 'flex', gap: 10 }}><input type="checkbox" style={{ width: 'auto' }} checked={useSummary} onChange={(e) => setUseSummary(e.target.checked)} /><span>Reprendre les réglages de l'Excel :{[sum.deposit ? `dépôt réel ${String(sum.deposit).replace('.', ',')} $` : '', importsBt && sum.backtestDeposit ? `dépôt backtesting ${String(sum.backtestDeposit).replace('.', ',')} $` : '', sum.defaultLots ? `lot par défaut ${sum.defaultLots}` : ''].filter(Boolean).join(', ')}</span></label>}
+          {hasSum && <p>Repris du Résumé de l'Excel : {toApply.map((i) => `${i.label} ${i.fmt(i.val)}`).join(', ')}.</p>}
+          {conflicts.length > 0 && <label style={{ display: 'flex', gap: 10 }}><input type="checkbox" style={{ width: 'auto' }} checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} /><span>Le fichier a d'autres valeurs que les tiennes ({conflicts.map((i) => `${i.label} : ${i.fmt(i.now)} chez toi, ${i.fmt(i.val)} dans le fichier`).join(' ; ')}). <b>Tes valeurs sont gardées</b> ; coche pour les remplacer par celles du fichier.</span></label>}
           {res.unknownColumns.filter((c) => !/reference|repere|solde|calcule/i.test(c.normalize('NFD').replace(/[̀-ͯ]/g, ''))).length > 0 && <p className="muted">Colonnes non reprises : {res.unknownColumns.filter((c) => !/reference|repere|solde|calcule/i.test(c.normalize('NFD').replace(/[̀-ͯ]/g, ''))).join(', ')}.</p>}
           {res.skipped.length > 0 && <div className="banner">{res.skipped.length} ligne(s) ignorée(s) :<ul style={{ margin: '6px 0 0 18px', padding: 0 }}>{res.skipped.slice(0, 5).map((s, i) => <li key={i}>{s.sheet ? `${s.sheet}, ` : ''}ligne {s.line} : {s.reason}</li>)}</ul></div>}
           <label style={{ display: 'flex', gap: 10 }}><input type="radio" style={{ width: 'auto' }} checked={strategy === 'append'} onChange={() => setStrategy('append')} /><span><b>Ajouter</b> à mes trades (les doublons exacts sont ignorés)</span></label>
