@@ -319,3 +319,53 @@ td.bal{color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
 @media(max-width:560px){.detail{grid-template-columns:repeat(2,minmax(0,1fr))}.detail .info{padding:9px 12px}.detail-shot img{max-height:240px}}
 .gatecard .seg{align-self:center}
 .linkbtn{background:none;border:0;padding:2px 0;margin:-4px 0 6px;color:var(--gold);cursor:pointer;font-size:.88rem;text-align:right;text-decoration:underline;justify-self:end}
+/* ===== Adaptation à tous les écrans ===== */
+.btn,.seg button,.pill{white-space:nowrap}
+img,svg,video,canvas{max-width:100%}
+@media(max-width:980px){
+  .app,.app.navclosed{grid-template-columns:minmax(0,1fr)}
+  aside{display:none}
+}
+@media(max-width:760px){
+  main{padding:18px 14px 96px}
+  header.top{gap:12px;margin-bottom:16px;align-items:center}
+  header.top h1{font-size:1.7rem}
+  .actions{gap:8px;flex-wrap:nowrap;margin-left:auto}
+  .actions .btn.primary{padding:9px 12px;font-size:.88rem}
+  .seg button{padding:6px 10px;font-size:.82rem}
+  .deposit{flex-direction:column;align-items:flex-start;gap:12px}
+  .deposit .v{font-size:2.2rem}
+  .remind{flex-direction:column;align-items:flex-start}
+  .jbar{gap:6px}.jbar .grow{flex:1 1 100%}.jbar select{flex:1 1 140px}.jbar .range{flex:1 1 100%}.jbar .range input{flex:1}
+  .jstats>div{flex:1 1 45%;border-bottom:1px solid var(--line)}
+  .phero{gap:12px}.pnav{margin-left:0}
+}
+@media(max-width:480px){
+  header.top{flex-wrap:wrap}
+  .tl{flex:1 1 100%}
+  .actions{flex:1 1 100%;justify-content:space-between}
+  .actions .btn.primary{flex:1}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .gatecard{padding:22px 18px}
+  .feature .card{padding:14px}
+  dialog{width:calc(100vw - 16px);max-width:none}
+}
+@media(min-width:1700px){
+  main{max-width:1500px}
+}
+.set>*,.card,.set input,.set select,.set textarea{min-width:0}
+.jbar .range{min-width:0;flex-wrap:nowrap}
+.jbar .range input{min-width:0;flex:1 1 0;width:100%}
+.pnav{max-width:100%}
+.phero>div{min-width:0}
+@media(max-width:380px){.pnav button{padding:5px 9px;font-size:.8rem}.capform{grid-template-columns:minmax(0,1fr)}}
+.set .btn,.dlg-b .btn{white-space:normal;text-align:center}
+/* Journal sur petit écran : colonnes essentielles (tout le détail s'ouvre en touchant la ligne) */
+@media(max-width:700px){
+  .jtable thead th:nth-child(3),.jtable thead th:nth-child(5),.jtable thead th:nth-child(7),.jtable thead th:nth-child(9),.jtable thead th:nth-child(10),.jtable thead th:nth-child(12),.jtable thead th:nth-child(8),.jtable thead th:nth-child(14),
+  .jtable tbody td:nth-child(3),.jtable tbody td:nth-child(5),.jtable tbody td:nth-child(7),.jtable tbody td:nth-child(9),.jtable tbody td:nth-child(10),.jtable tbody td:nth-child(12),.jtable tbody td:nth-child(8),.jtable tbody td:nth-child(14){display:none}
+  .jtable tfoot{display:none}
+  .jscroll{max-height:none}
+}
+@media(max-width:480px){.jtable{font-size:.76rem}.jtable th{padding:8px 4px;letter-spacing:.04em}.jtable td{padding:8px 4px}}
+@media(max-width:480px){.jtable thead th:nth-child(4),.jtable tbody td:nth-child(4){display:none}}
