@@ -33,6 +33,8 @@ export default function Dashboard({ state, onNew, onEdit }) {
   const setTab = setChosen;
   const dd = s.money.drawdown;
   const noDeposit = !(cap > 0); // sans dépôt : aucun montant d'argent n'est affiché
+  // Trades terminés sans pips ni solde : leur gain/perte compte 0 $, donc perte, profit factor et drawdown sont incomplets.
+  const missing = Math.max(0, s.money.coverage.of - s.money.coverage.with);
 
   const fmtInt = (v) => formatNumber(v, { digits: 2 });
   const series = {
@@ -45,6 +47,7 @@ export default function Dashboard({ state, onNew, onEdit }) {
   return (
     <>
       {banner}
+      {!noDeposit && missing > 0 && <div className="remind" role="status"><span><b>{missing} trade(s) sans montant.</b> Ils n'ont ni pips ni solde réel : leur gain ou perte compte 0 $, donc la perte totale, le profit factor et le drawdown sont incomplets. Ajoute leurs pips ou leur solde dans le Journal.</span></div>}
 
       <section className="grid kpis">
         <div className="card" style={{ '--i': 1 }}><div className="k">Réussite</div>
@@ -55,16 +58,16 @@ export default function Dashboard({ state, onNew, onEdit }) {
           <div className="sub">{noDeposit || s.money.total === null ? 'montant masqué : dépôt non défini' : `gain estimé ≈ ${money(s.money.grossWin, settings, { sign: true, digits: 2 })}`}</div></div>
         <div className="card" style={{ '--i': 2 }}><div className="k">Trades perdants</div>
           <div className="v loss"><CountUp value={s.losses} format={(v) => String(Math.round(v))} /></div>
-          <div className="sub">{noDeposit || s.money.total === null ? 'montant masqué : dépôt non défini' : `perte estimée ≈ ${money(-s.money.grossLoss, settings, { sign: true, digits: 2 })}`}</div></div>
+          <div className="sub">{noDeposit || s.money.total === null ? 'montant masqué : dépôt non défini' : `perte estimée ≈ ${money(-s.money.grossLoss, settings, { sign: true, digits: 2 })}${missing ? ' · incomplète' : ''}`}</div></div>
         <div className="card" style={{ '--i': 2 }}><div className="k">Profit factor</div>
-          <div className="v">{s.money.profitFactor === null ? '—' : s.money.profitFactor === Infinity ? '∞' : <CountUp value={s.money.profitFactor} format={fmtInt} />}</div>
-          <div className="sub">gains ÷ pertes</div></div>
+          <div className="v">{s.money.profitFactor === null || missing > 0 ? '—' : s.money.profitFactor === Infinity ? '∞' : <CountUp value={s.money.profitFactor} format={fmtInt} />}</div>
+          <div className="sub">{missing > 0 && !noDeposit ? 'incomplet : montants manquants' : 'gains ÷ pertes'}</div></div>
         <div className="card" style={{ '--i': 3 }}><div className="k">Pips</div>
           <div className={`v ${signClass(s.pips.total)}`}>{s.pips.total === null ? '—' : <CountUp value={s.pips.total} format={(v) => formatNumber(v, { digits: 1, sign: true })} />}</div>
           <div className="sub">{s.pips.coverage.with} / {s.pips.coverage.of} saisis</div></div>
         <div className="card" style={{ '--i': 4 }}><div className="k">Drawdown max</div>
           <div className="v loss">{dd && !noDeposit ? <CountUp value={-dd.amount} format={(v) => money(v, settings, { digits: 2 })} /> : '—'}</div>
-          <div className="sub">{dd?.pct != null ? `${formatPercent(dd.pct, 1)} du sommet` : s.open ? `${s.open} trade(s) en cours` : ' '}</div></div>
+          <div className="sub">{missing > 0 && !noDeposit ? 'incomplet : montants manquants' : dd?.pct != null ? `${formatPercent(dd.pct, 1)} du sommet` : s.open ? `${s.open} trade(s) en cours` : ' '}</div></div>
       </section>
 
       <section className="feature" style={{ '--i': 5 }}>
