@@ -55,6 +55,16 @@ export async function signUp(email, password) {
   await syncNow();
   return { needsConfirmation: false };
 }
+/** « Mot de passe oublié » : envoie un e-mail avec un lien qui revient sur le site. */
+export async function requestPasswordReset(email) {
+  await client.recover(email.trim(), `${location.origin}${location.pathname}`);
+}
+/** Étape finale : nouveau mot de passe (jetons du lien reçu par e-mail), puis connexion automatique. */
+export async function completePasswordReset(tokens, password) {
+  await client.finishRecovery(tokens, password);
+  set({ signedIn: true, email: client.user.email });
+  return syncNow();
+}
 export async function signOut() {
   await client.signOut();
   set({ signedIn: false, email: '', status: 'idle', lastSyncAt: 0, error: '' });

@@ -13,6 +13,7 @@ import AuthPage from './components/AuthPage.jsx';
 import DepositGate from './components/DepositGate.jsx';
 import ProfileMenu from './components/ProfileMenu.jsx';
 import { startAutoSync, useSyncStatus, signOut } from './sync.js';
+import { parseRecoveryHash } from './core/sync/client.js';
 import { MODE_LABELS } from './core/domain/trade.js';
 
 const ROUTES = [
@@ -36,6 +37,12 @@ export default function App() {
   const path = useHashRoute();
   const [form, setForm] = useState(null); // { trade } ; trade = null → nouveau
   const [err, setErr] = useState(null);
+  // Lien « mot de passe oublié » reçu par e-mail : on lit les jetons puis on les retire de l'adresse.
+  const [recovery, setRecovery] = useState(() => {
+    const r = parseRecoveryHash(window.location.hash);
+    if (r) { try { window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/`); } catch { /* ignoré */ } }
+    return r;
+  });
   const [navOpen, setNavOpen] = useState(() => { try { return localStorage.getItem('easyjournal.nav') !== '0'; } catch { return true; } });
   const toggleNav = () => setNavOpen((o) => { try { localStorage.setItem('easyjournal.nav', o ? '0' : '1'); } catch { /* ignoré */ } return !o; });
   const [guest, setGuest] = useState(() => { try { return localStorage.getItem('easyjournal.guest') === '1'; } catch { return false; } });
@@ -55,7 +62,7 @@ export default function App() {
   const { Page } = route;
   if (err) return <main style={{ padding: 24 }}><h1>Erreur de chargement</h1><p>{err}</p></main>;
   if (!state.ready) return null;
-  if (sync.configured && !sync.signedIn && !guest) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><AuthPage onGuest={continueAsGuest} /><Toasts /></>;
+  if (sync.configured && (recovery || (!sync.signedIn && !guest))) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><AuthPage onGuest={continueAsGuest} recovery={recovery} onRecovered={() => setRecovery(null)} /><Toasts /></>;
   const mode = state.settings.mode;
   const needsDeposit = !((state.settings.initialCapital[mode] || 0) > 0) && !skipDeposit; // dépôt demandé, mais on peut passer
   if (needsDeposit) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><DepositGate settings={state.settings} onSkip={() => { try { localStorage.setItem('easyjournal.skipDeposit', '1'); } catch { /* ignoré */ } setSkipDeposit(true); }} onGuestLogout={sync.signedIn ? logout : null} /><Toasts /></>;

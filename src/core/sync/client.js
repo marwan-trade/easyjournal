@@ -14,8 +14,22 @@ const AUTH_FR = [
   [/rate limit|too many/i, 'Trop de tentatives : réessaie dans quelques minutes.'],
   [/signups? not allowed|signup is disabled/i, 'Les inscriptions sont désactivées sur ce projet Supabase.'],
   [/invalid.*email|unable to validate email/i, 'Adresse e-mail invalide.'],
+  [/different from the old password|same as the old/i, 'Choisis un mot de passe différent de l\'ancien.'],
+  [/otp_expired|link.*(expired|invalid)|token.*expired/i, 'Lien expiré ou déjà utilisé : refais une demande de réinitialisation.'],
 ];
 const frError = (msg) => AUTH_FR.find(([re]) => re.test(msg))?.[1] ?? msg;
+
+/** Lecture du lien de réinitialisation reçu par e-mail (Supabase ajoute les jetons après le « # » de l'adresse). */
+export function parseRecoveryHash(hash) {
+  const p = new URLSearchParams(String(hash ?? '').replace(/^#/, ''));
+  if (p.get('error') || p.get('error_code')) {
+    return { error: frError(`${p.get('error_code') ?? ''} ${p.get('error_description') ?? ''}`.trim()) || 'Lien invalide.' };
+  }
+  if (p.get('type') === 'recovery' && p.get('access_token')) {
+    return { access_token: p.get('access_token'), refresh_token: p.get('refresh_token') ?? '', expires_in: Number(p.get('expires_in')) || 3600 };
+  }
+  return null;
+}
 
 export class SupabaseClient {
   constructor({ url, key, storage = null, fetchImpl = globalThis.fetch?.bind(globalThis), now = () => Date.now() }) {
@@ -61,6 +75,22 @@ export class SupabaseClient {
   async signIn(email, password) {
     const r = await this._auth('token?grant_type=password', { email, password });
     this._save(this._toSession(r));
+    return this.user;
+  }
+  /** Envoie l'e-mail « mot de passe oublié » (la réponse est la même que le compte existe ou non). */
+  async recover(email, redirectTo) {
+    await this._auth(`recover?redirect_to=${encodeURIComponent(redirectTo)}`, { email });
+  }
+  /** Fixe le nouveau mot de passe avec les jetons du lien reçu par e-mail, puis ouvre la session. */
+  async finishRecovery(tokens, password) {
+    let res;
+    try {
+      res = await this.fetch(`${this.url}/auth/v1/user`, { method: 'PUT',
+        headers: { apikey: this.key, Authorization: `Bearer ${tokens.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+    } catch { throw new SyncError('network', 'Connexion impossible : vérifie internet.'); }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new SyncError('auth', frError(String(json.error_description ?? json.msg ?? json.message ?? `Erreur ${res.status}`)));
+    this._save(this._toSession({ ...tokens, user: { id: json.id, email: json.email } }));
     return this.user;
   }
   async signOut() {

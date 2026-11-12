@@ -214,3 +214,25 @@ test('client : bucket absent = message clair, image absente = null', async () =>
   status = 404; body = { message: 'Object not found' };
   assert.equal(await c.downloadShot('a'), null);
 });
+
+import { parseRecoveryHash } from '../src/core/sync/client.js';
+test('mot de passe oublié : lecture du lien reçu par e-mail', () => {
+  assert.deepEqual(parseRecoveryHash('#access_token=AT&refresh_token=RT&expires_in=3600&token_type=bearer&type=recovery'), { access_token: 'AT', refresh_token: 'RT', expires_in: 3600 });
+  assert.equal(parseRecoveryHash('#/'), null);
+  assert.equal(parseRecoveryHash('#access_token=AT&type=signup'), null);
+  assert.match(parseRecoveryHash('#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired').error, /expiré/);
+});
+test('mot de passe oublié : requêtes Supabase (envoi du lien, nouveau mot de passe)', async () => {
+  const calls = [];
+  const fetchImpl = async (url, opts) => { calls.push({ url, ...opts }); return { ok: true, status: 200, json: async () => ({ id: 'U9', email: 'a@b.c' }) }; };
+  const store = new Map(); const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) };
+  const c = new SupabaseClient({ url: 'https://x.supabase.co', key: 'pub', storage, fetchImpl, now: () => 1e12 });
+  await c.recover('a@b.c', 'https://site.test/easyjournal/');
+  assert.equal(calls[0].url, 'https://x.supabase.co/auth/v1/recover?redirect_to=https%3A%2F%2Fsite.test%2Feasyjournal%2F');
+  assert.deepEqual(JSON.parse(calls[0].body), { email: 'a@b.c' });
+  assert.equal(c.signedIn, false);
+  const u = await c.finishRecovery({ access_token: 'AT', refresh_token: 'RT', expires_in: 3600 }, 'nouveau1');
+  assert.equal(calls[1].method, 'PUT'); assert.equal(calls[1].headers.Authorization, 'Bearer AT');
+  assert.deepEqual(JSON.parse(calls[1].body), { password: 'nouveau1' });
+  assert.equal(u.email, 'a@b.c'); assert.equal(c.signedIn, true);
+});

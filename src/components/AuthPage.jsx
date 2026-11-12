@@ -1,6 +1,6 @@
 import { useState, useId } from 'react';
 import Logo from './Logo.jsx';
-import { signIn, signUp } from '../sync.js';
+import { signIn, signUp, requestPasswordReset, completePasswordReset } from '../sync.js';
 
 const FEATURES = [
   ['◈', 'Journal clair', 'Pips, lots et argent calculés pour toi, solde mis à jour après chaque trade.'],
@@ -24,19 +24,25 @@ function HeroChart() {
 }
 
 /** Page d'accueil / connexion. `onGuest` : continuer sans compte (données seulement sur cet appareil). */
-export default function AuthPage({ onGuest }) {
+export default function AuthPage({ onGuest, recovery = null, onRecovered }) {
   const id = useId();
-  const [mode, setMode] = useState('in'); // 'in' | 'up' | 'sent'
+  const [mode, setMode] = useState(recovery ? (recovery.error ? 'in' : 'newpw') : 'in'); // 'in' | 'up' | 'sent' | 'forgot' | 'resetsent' | 'newpw'
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState(recovery?.error ?? '');
+  const [pw2, setPw2] = useState('');
 
   const submit = async (e) => {
     e.preventDefault(); setBusy(true); setMsg('');
     try {
-      if (mode === 'in') await signIn(email, pw);
+      if (mode === 'forgot') { await requestPasswordReset(email); setMode('resetsent'); }
+      else if (mode === 'newpw') {
+        if (pw !== pw2) { setMsg('Les deux mots de passe ne sont pas identiques.'); return; }
+        await completePasswordReset(recovery, pw); onRecovered?.();
+      }
+      else if (mode === 'in') await signIn(email, pw);
       else { const r = await signUp(email, pw); if (r.needsConfirmation) setMode('sent'); }
     } catch (err) { setMsg(err.message || 'Échec.'); } finally { setBusy(false); }
   };
@@ -55,7 +61,45 @@ export default function AuthPage({ onGuest }) {
       </section>
 
       <section className="auth-card" aria-labelledby={`${id}-t`}>
-        {mode === 'sent' ? (
+        {mode === 'resetsent' ? (
+          <div className="sent" role="status">
+            <div className="mail" aria-hidden="true">✉</div>
+            <h2 id={`${id}-t`}>Vérifie ta boîte mail</h2>
+            <p>Si un compte existe avec <b>{email}</b>, un message avec un lien pour choisir un nouveau mot de passe vient d'être envoyé (regarde aussi les courriers indésirables).</p>
+            <button className="btn primary" onClick={() => switchTo('in')}>Retour à la connexion</button>
+          </div>
+        ) : mode === 'forgot' ? (
+          <>
+            <h2 id={`${id}-t`}>Mot de passe oublié</h2>
+            <p className="sub">Écris l'adresse e-mail de ton compte : on t'envoie un lien pour choisir un nouveau mot de passe.</p>
+            <form onSubmit={submit}>
+              <label className="f">Adresse e-mail
+                <input type="email" autoComplete="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="toi@exemple.com" />
+              </label>
+              {msg && <p className="banner" role="alert">{msg}</p>}
+              <button className="btn primary wide" type="submit" disabled={busy}>{busy ? 'Un instant…' : 'Envoyer le lien'}</button>
+            </form>
+            <button className="btn wide ghost" type="button" onClick={() => switchTo('in')}>Retour à la connexion</button>
+          </>
+        ) : mode === 'newpw' ? (
+          <>
+            <h2 id={`${id}-t`}>Nouveau mot de passe</h2>
+            <p className="sub">Choisis un nouveau mot de passe (6 caractères minimum). Tu seras connecté juste après.</p>
+            <form onSubmit={submit}>
+              <label className="f">Nouveau mot de passe
+                <span className="pwrow">
+                  <input type={show ? 'text' : 'password'} autoComplete="new-password" required minLength={6} autoFocus value={pw} onChange={(e) => setPw(e.target.value)} />
+                  <button type="button" className="eye" onClick={() => setShow(!show)} aria-pressed={show} aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>{show ? 'Masquer' : 'Afficher'}</button>
+                </span>
+              </label>
+              <label className="f">Confirme le mot de passe
+                <input type={show ? 'text' : 'password'} autoComplete="new-password" required minLength={6} value={pw2} onChange={(e) => setPw2(e.target.value)} />
+              </label>
+              {msg && <p className="banner" role="alert">{msg}</p>}
+              <button className="btn primary wide" type="submit" disabled={busy}>{busy ? 'Un instant…' : 'Enregistrer et me connecter'}</button>
+            </form>
+          </>
+        ) : mode === 'sent' ? (
           <div className="sent" role="status">
             <div className="mail" aria-hidden="true">✉</div>
             <h2 id={`${id}-t`}>Vérifie ta boîte mail</h2>
@@ -81,6 +125,7 @@ export default function AuthPage({ onGuest }) {
                 </span>
               </label>
               {msg && <p className="banner" role="alert">{msg}</p>}
+              {mode === 'in' && <button type="button" className="linkbtn" onClick={() => switchTo('forgot')}>Mot de passe oublié ?</button>}
               <button className="btn primary wide" type="submit" disabled={busy}>{busy ? 'Un instant…' : mode === 'in' ? 'Se connecter' : 'Créer mon compte'}</button>
             </form>
             <div className="or"><span>ou</span></div>
