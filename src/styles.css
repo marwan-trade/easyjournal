@@ -369,3 +369,11 @@ img,svg,video,canvas{max-width:100%}
 }
 @media(max-width:480px){.jtable{font-size:.76rem}.jtable th{padding:8px 4px;letter-spacing:.04em}.jtable td{padding:8px 4px}}
 @media(max-width:480px){.jtable thead th:nth-child(4),.jtable tbody td:nth-child(4){display:none}}
+/* Très petits écrans : l'en-tête (mode + Nouveau trade + profil) tient sur une ligne sans couper le texte */
+@media(max-width:400px){
+  .actions{gap:6px}
+  .actions .seg{padding:2px}
+  .actions .seg button{padding:6px 8px;font-size:.78rem}
+  .actions .btn.primary{padding:9px 8px;font-size:.8rem;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .profile>button{flex:none}
+}
