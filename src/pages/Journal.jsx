@@ -50,7 +50,15 @@ export default function Journal({ state, onNew, onEdit }) {
         {!cap0 && sum.money.total !== null && <div><dt>Net</dt><dd className={signClass(sum.money.total)}>{money(sum.money.total, settings, { sign: true })}</dd></div>}
       </dl>
       <p className="muted jnote" aria-live="polite">{sum.open ? `${sum.open} en cours` : ''}{sum.open && sum.money.estimatedCount && !cap0 ? ' · ' : ''}{sum.money.estimatedCount && !cap0 ? `${sum.money.estimatedCount} montant(s) estimé(s) ≈` : ''}</p>
-      {rows.length === 0 ? <p className="muted" style={{ padding: '16px 0' }}>Aucun trade ne correspond à ces filtres. <button className="btn" onClick={() => setF(EMPTY)}>Réinitialiser</button></p> : (
+      {rows.length === 0 ? <p className="muted" style={{ padding: '16px 0' }}>Aucun trade ne correspond à ces filtres. <button className="btn" onClick={() => setF(EMPTY)}>Réinitialiser</button></p> : (<>
+        <ul className="jcards" aria-label="Trades">
+          {rows.map((t) => { const p = effectivePnl(t, settings); const amt = cap0 || !p ? null : `${p.estimated ? '≈ ' : ''}${money(p.value, settings, { sign: true })}`; return (
+            <li key={t.id}><div className="jcard" role="button" tabIndex={0} onClick={() => onEdit(t)} onKeyDown={(e) => e.key === 'Enter' && onEdit(t)}>
+              <div className="jc1"><b>{t.pair}</b>{t.side && <span className="muted"> · {t.side}</span>}<span className={`jcp ${signClass(p?.value)}`}>{amt ?? pipsText(t)}</span></div>
+              <div className="jc2"><span>{shortDate(t.date)}{t.timeframe ? ` · ${t.timeframe}` : ''}{t.scenario ? ` · ${t.scenario}` : ''}</span><ResultPill result={t.result} /></div>
+              <div className="jc3 muted"><span>{pipsText(t)} pips{t.lots ? ` · lot ${t.lots}` : ''}{t.rr ? ` · RR 1:${formatNumber(t.rr, { digits: 2 })}` : ''}</span>{t.rulesFollowed !== undefined && t.rulesFollowed !== null && <span>{t.rulesFollowed ? '✔ Règles' : '✘ Règles'}</span>}{t.screenshot && <button type="button" className="shotbtn" aria-label={`Voir la capture du trade ${t.pair}`} onClick={(e) => { e.stopPropagation(); setShot(t); }}>▣</button>}</div>
+            </div></li>); })}
+        </ul>
         <div className="tablewrap jscroll"><table className="jtable"><thead><tr><th>Date</th><th>Paire</th><th>Scénario</th><th>Sens</th><th>Timeframe</th><th>Résultat</th><th>Règles</th><th aria-label="Capture du graphique">Graphique</th><th>Notes</th><th className="num">RR</th><th className="num">Pips</th><th className="num">Lots</th><th className="num">Estimé</th><th className="num">Solde réel</th></tr></thead><tbody>
           {rows.map((t) => { const p = effectivePnl(t, settings); return (
             <tr key={t.id} tabIndex={0} onClick={() => onEdit(t)} onKeyDown={(e) => e.key === 'Enter' && onEdit(t)}>
@@ -73,7 +81,7 @@ export default function Journal({ state, onNew, onEdit }) {
             <td className={`num ${signClass(sum.money.total)}`}><b>{cap0 || sum.money.total === null ? '—' : money(sum.money.total, settings, { sign: true })}</b></td>
             <td className="num bal" title="Argent actuel"><b>{cap0 ? '—' : money(currentBalance, settings, { digits: 2 })}</b></td>
           </tr></tfoot></table></div>
-      )}
+      </>)}
       {shot && <ShotViewer trade={shot} list={rows.filter((t) => t.screenshot)} onChange={setShot} onClose={() => setShot(null)} />}
     </div>
   );

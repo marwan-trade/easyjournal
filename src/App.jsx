@@ -68,7 +68,7 @@ export default function App() {
   const { Page } = route;
   const snoozed = (() => { try { return Date.now() < Number(localStorage.getItem('easyjournal.backupSnooze') || 0); } catch { return false; } })();
   const [, bump] = useState(0);
-  const showBackup = backupDue(state.settings, state.trades.length) && !snoozed;
+  const showBackup = backupDue(state.settings, state.trades.length) && !snoozed && (state.settings.initialCapital[state.settings.mode] || 0) > 0; // un seul rappel à la fois
   const snooze = () => { try { localStorage.setItem('easyjournal.backupSnooze', String(Date.now() + 86400000)); } catch { /* ignoré */ } bump((n) => n + 1); };
   if (err) return <main style={{ padding: 24 }}><h1>Erreur de chargement</h1><p>{err}</p></main>;
   if (!state.ready) return null;
