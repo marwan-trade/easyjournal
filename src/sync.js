@@ -26,7 +26,8 @@ export async function syncNow() {
     try {
       const r = await runSync({ client, adapter: syncAdapter() });
       lastRev = state.rev;
-      set({ status: 'idle', lastSyncAt: Date.now(), error: '' });
+      if (r?.shotsError) set({ status: 'error', lastSyncAt: Date.now(), error: `Données synchronisées, mais pas les captures : ${r.shotsError}` });
+      else set({ status: 'idle', lastSyncAt: Date.now(), error: '' });
       return r;
     } catch (e) {
       if (e instanceof SyncError && e.code === 'auth' && !client.signedIn) set({ signedIn: false, email: '' });

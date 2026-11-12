@@ -1,3 +1,4 @@
+import { shotKey } from '../sync/shots.js';
 /**
  * État de l'application : source unique de vérité en mémoire, synchronisée avec le stockage.
  * Les écrans s'abonnent avec subscribe() et se redessinent à chaque changement.
@@ -217,12 +218,24 @@ export function syncAdapter() {
     tombstones: async () => (await db.get('meta', 'tombstones'))?.value ?? { trades: {}, ideas: {} },
     getMeta: async (k) => (await db.get('meta', `sync-${k}`))?.value ?? null,
     setMeta: async (k, v) => { await db.put('meta', { key: `sync-${k}`, value: v }); },
+    /** Pose une capture téléchargée depuis le cloud : pas une modification locale (pas de rev, pas de updatedAt). */
+    async setShot(id, dataUrl) {
+      const i = state.trades.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      state.trades[i] = { ...state.trades[i], screenshot: dataUrl };
+      await db.put('trades', state.trades[i]);
+      emit();
+    },
     /** Applique ce que la fusion a décidé. N'incrémente PAS rev : ce ne sont pas des modifications locales. */
     async applyRemote({ trades, ideas, settings }) {
       // Les captures ne passent pas par le cloud : on garde celle de cet appareil quand le trade distant n'en a pas.
       const up = trades.upsert.map((t) => {
         const n = normalizeTrade(t);
-        if (!n.screenshot) { const mine = state.trades.find((x) => x.id === n.id)?.screenshot; if (mine) n.screenshot = mine; }
+        const rk = n.shotKey; delete n.shotKey; // empreinte de la capture dans le cloud (le champ n'est pas gardé dans le trade)
+        const mine = state.trades.find((x) => x.id === n.id)?.screenshot;
+        // On garde la capture locale si elle correspond à celle du cloud (ou si le cloud n'en a pas encore : ancien trade) ;
+        // sinon elle est remplacée : retirée si le cloud n'en a plus, téléchargée juste après si elle a changé.
+        if (mine && (rk === undefined || rk === shotKey(mine))) n.screenshot = mine;
         return n;
       });
       if (up.length) {

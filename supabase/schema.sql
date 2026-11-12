@@ -45,3 +45,26 @@ create policy "settings: propriétaire" on public.user_settings for all to authe
 -- Aucun accès pour les visiteurs non connectés ; accès complet (limité par les règles ci-dessus) pour les connectés.
 revoke all on public.trades, public.ideas, public.user_settings from anon;
 grant select, insert, update, delete on public.trades, public.ideas, public.user_settings to authenticated;
+
+-- ============================================================================
+-- CAPTURES D'ÉCRAN (à coller aussi dans « SQL Editor » puis « Run ») : synchronise les images entre tous tes appareils.
+-- Bucket PRIVÉ « screenshots » ; chaque utilisateur n'accède qu'à son propre dossier (nom du dossier = son identifiant).
+-- ============================================================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('screenshots', 'screenshots', false, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+on conflict (id) do update set public = false, file_size_limit = 5242880;
+
+drop policy if exists "captures: lecture propriétaire"      on storage.objects;
+drop policy if exists "captures: ajout propriétaire"        on storage.objects;
+drop policy if exists "captures: modification propriétaire" on storage.objects;
+drop policy if exists "captures: suppression propriétaire"  on storage.objects;
+
+create policy "captures: lecture propriétaire"      on storage.objects for select to authenticated
+  using (bucket_id = 'screenshots' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "captures: ajout propriétaire"        on storage.objects for insert to authenticated
+  with check (bucket_id = 'screenshots' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "captures: modification propriétaire" on storage.objects for update to authenticated
+  using (bucket_id = 'screenshots' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'screenshots' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "captures: suppression propriétaire"  on storage.objects for delete to authenticated
+  using (bucket_id = 'screenshots' and (storage.foldername(name))[1] = auth.uid()::text);

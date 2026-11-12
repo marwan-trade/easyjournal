@@ -106,6 +106,37 @@ export class SupabaseClient {
     return res.status === 204 ? null : res.json().catch(() => null);
   }
 
+  /* ----- captures d'écran (Supabase Storage, bucket privé « screenshots », dossier = id de l'utilisateur) ----- */
+  async _storage(path, { method = 'GET', body, headers = {} } = {}, retried = false) {
+    const token = await this._token();
+    let res;
+    try { res = await this.fetch(`${this.url}/storage/v1/object/${path}`, { method, headers: { apikey: this.key, Authorization: `Bearer ${token}`, ...headers }, body }); }
+    catch { throw new SyncError('network', 'Connexion impossible : vérifie internet.'); }
+    if (res.status === 401 && !retried) { await this.refresh(); return this._storage(path, { method, body, headers }, true); }
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      const msg = String(j.message ?? j.error ?? `Erreur ${res.status}`);
+      if (/bucket not found/i.test(msg) || res.status === 404 && /bucket/i.test(msg)) throw new SyncError('schema', 'Le dossier « screenshots » n\'existe pas dans Supabase : exécute la partie « captures » de supabase/schema.sql.');
+      if (res.status === 401 || res.status === 403) throw new SyncError('auth', 'Accès refusé aux captures : vérifie les règles de stockage (supabase/schema.sql).');
+      throw new SyncError(res.status === 404 ? 'missing' : 'http', msg);
+    }
+    return res;
+  }
+  _shotPath(id) { return `screenshots/${this.user?.id}/${encodeURIComponent(id)}.jpg`; }
+  async uploadShot(id, bytes, mime = 'image/jpeg') {
+    await this._storage(this._shotPath(id), { method: 'POST', body: bytes, headers: { 'Content-Type': mime, 'x-upsert': 'true' } });
+  }
+  /** @returns {Promise<{bytes: Uint8Array, mime: string}|null>} null si l'image n'existe pas (encore) sur le serveur */
+  async downloadShot(id) {
+    try {
+      const res = await this._storage(`authenticated/${this._shotPath(id)}`);
+      return { bytes: new Uint8Array(await res.arrayBuffer()), mime: res.headers.get('content-type') || 'image/jpeg' };
+    } catch (e) { if (e.code === 'missing') return null; throw e; }
+  }
+  async deleteShot(id) {
+    try { await this._storage(this._shotPath(id), { method: 'DELETE' }); } catch (e) { if (e.code !== 'missing') throw e; }
+  }
+
   /** Toutes les lignes modifiées depuis `since` (ms), page par page. */
   async pull(table, since, cols = 'id,data,updated_at,deleted') {
     const out = []; const PAGE = 500;

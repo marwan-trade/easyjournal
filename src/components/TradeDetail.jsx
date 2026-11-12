@@ -17,6 +17,7 @@ export default function TradeDetail({ trade: t, settings, onEdit, onClose }) {
     <Dialog title={`${t.pair} · ${shortDate(t.date)}`} onClose={onClose}
       footer={<><button type="button" className="btn" onClick={onClose}>Fermer</button><button type="button" className="btn primary" onClick={onEdit}>Modifier</button></>}>
       <div className="detail-head"><ResultPill result={t.result} />{t.side && <span className="chip">{t.side}</span>}{t.scenario && <span className="chip">{t.scenario}</span>}</div>
+      {t.screenshot && <button type="button" className="detail-shot" onClick={() => setViewing(true)} aria-label="Agrandir la capture"><img src={t.screenshot} alt={`Capture du trade ${t.pair} du ${t.date}`} /></button>}
       <dl className="detail">
         <Info k="Date">{t.date}</Info>
         <Info k="Paire">{t.pair}</Info>
@@ -34,7 +35,6 @@ export default function TradeDetail({ trade: t, settings, onEdit, onClose }) {
         <Info k="Étiquettes" wide>{(t.tags ?? []).join(', ')}</Info>
         <Info k="Notes" wide>{t.notes && <span className="pre">{t.notes}</span>}</Info>
       </dl>
-      {t.screenshot && <button type="button" className="detail-shot" onClick={() => setViewing(true)} aria-label="Agrandir la capture"><img src={t.screenshot} alt={`Capture du trade ${t.pair} du ${t.date}`} /></button>}
       {viewing && t.screenshot && <ShotViewer trade={t} list={[]} onClose={() => setViewing(false)} />}
     </Dialog>
   );
