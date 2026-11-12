@@ -37,7 +37,7 @@ export default function DepositGate({ settings, onSkip, onGuestLogout }) {
         {err && <p className="err" role="alert">{err}</p>}
         <button className="btn primary" type="submit">{target === 'reel' ? 'Valider mon dépôt' : 'Valider et ouvrir le Backtesting'}</button>
         <button className="btn" type="button" onClick={onSkip}>Passer pour l'instant</button>
-        <p className="fine">Tu pourras l'écrire plus tard dans ton profil ; l'argent actuel sera calculé une fois le dépôt renseigné.</p>
+        <p className="fine">Tu pourras l'écrire plus tard dans les paramètres ; l'argent actuel sera calculé une fois le dépôt renseigné.</p>
         {onGuestLogout && <button className="btn" type="button" onClick={onGuestLogout}>Se déconnecter</button>}
       </form>
     </div>

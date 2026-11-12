@@ -1,13 +1,5 @@
 import { signedPips } from '../core/domain/trade.js';
 import { formatNumber, formatPercent } from '../format.js';
-import { addTradesRaw, state } from '../store.js';
-import { demoTrades } from '../core/demo.js';
-import { toast } from './toast.jsx';
-
-export async function loadDemoData() {
-  const n = await addTradesRaw(demoTrades({ backtest: state.settings.backtest }));
-  toast(n ? `${n} trades fictifs ajoutés. Tu pourras les supprimer dans ton profil.` : 'Les données de démo sont déjà chargées.');
-}
 
 export const ResultPill = ({ result }) => {
   if (!result) return <span className="pill o">En cours</span>;
@@ -30,8 +22,8 @@ export function RateBars({ rows, labelOf = (r) => r.key }) {
   );
 }
 
-export function Empty({ title, text, action, onAction, demo }) {
+export function Empty({ title, text, action, onAction, importLink }) {
   return <div className="card empty"><h2>{title}</h2><p>{text}</p>
     <div className="row" style={{ justifyContent: 'center' }}>{action && <button className="btn primary" onClick={onAction}>{action}</button>}
-      {demo && <button className="btn" onClick={loadDemoData}>Charger des données de démo</button>}</div></div>;
+      {importLink && <a className="btn" href="#/settings">Importer un fichier</a>}</div></div>;
 }

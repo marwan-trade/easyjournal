@@ -3,9 +3,10 @@
 export const SCHEMA_VERSION = 1;
 
 export const DEFAULT_SETTINGS = {
+  displayName: '', // nom affiché sur le profil
   theme: 'auto', // 'auto' | 'light' | 'dark'
   mode: 'reel', // mode affiché
-  backtest: false, // interface Backtesting ouverte (bouton dans le profil) ; fermée = tout est en réel
+  backtest: false, // interface Backtesting ouverte (bouton dans les paramètres) ; fermée = tout est en réel
   currency: 'USD',
   initialCapital: { reel: 0, backtest: 0 },
   defaultLots: 0.01, // lot utilisé pour estimer l'argent quand un trade n'a pas de lots (0 = ne pas estimer)

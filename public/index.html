@@ -8,6 +8,16 @@
   <meta name="google" content="notranslate">
   <meta name="theme-color" content="#0c0a09">
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <script>
+    (function () {
+      try {
+        var p = localStorage.getItem('easyjournal.theme') || 'auto';
+        var t = p === 'light' || p === 'dark' ? p : (window.matchMedia && !matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', t);
+        document.documentElement.style.colorScheme = t;
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="app.css">
 </head>
 <body>

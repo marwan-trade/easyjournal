@@ -21,12 +21,12 @@ export default function Dashboard({ state, onNew, onEdit }) {
         <div>
           <div className="k">Argent actuel{settings.backtest ? ` · ${MODE_LABELS[settings.mode]}` : ''}</div>
           <div className="v">{cap > 0 ? money(shown, settings, { digits: 2 }) : '—'}</div>
-          <div className="sub">{cap > 0 ? <>argent mis sur le compte {money(cap, settings, { digits: 2 })} · gagné / perdu <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b></> : <>Dépôt non défini : <a href="#/profile">écris l'argent mis sur ton compte</a> pour voir ton argent actuel.</>}</div>
+          <div className="sub">{cap > 0 ? <>argent mis sur le compte {money(cap, settings, { digits: 2 })} · gagné / perdu <b className={signClass(net)}>{money(net, settings, { sign: true, digits: 2 })}</b></> : <>Dépôt non défini : <a href="#/settings">écris l'argent mis sur ton compte</a> pour voir ton argent actuel.</>}</div>
         </div>
-        <a className="btn" href="#/profile">Modifier le dépôt</a>
+        <a className="btn" href="#/settings">Modifier le dépôt</a>
       </section>
   );
-  if (trades.length === 0) return <>{banner}<Empty title="Ton journal est vide" text="Ajoute ton premier trade ou importe ton Excel depuis les réglages." action="Ajouter un trade" onAction={onNew} demo /></>;
+  if (trades.length === 0) return <>{banner}<Empty title="Ton journal est vide" text="Ajoute ton premier trade ou importe ton Excel depuis les paramètres." action="Ajouter un trade" onAction={onNew} importLink /></>;
 
   // Courbe par défaut : la première qui a assez de points (argent, puis pips, puis +1/−1).
   const tab = chosen ?? ['money', 'pips', 'outcome'].find((k) => s.curves[k === 'money' ? 'equity' : k].length > 1) ?? 'outcome';

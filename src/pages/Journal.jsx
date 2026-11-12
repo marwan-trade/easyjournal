@@ -29,7 +29,7 @@ export default function Journal({ state, onNew, onEdit }) {
   const sum = summarize(rows, settings);
   const lots = rows.reduce((a, t) => a + (t.lots ?? 0), 0);
 
-  if (all.length === 0) return <Empty title="Ton journal est vide" text="Ajoute un trade, ou importe ton Excel depuis ton profil." action="Ajouter un trade" onAction={onNew} demo />;
+  if (all.length === 0) return <Empty title="Ton journal est vide" text="Ajoute un trade, ou importe ton Excel depuis les paramètres." action="Ajouter un trade" onAction={onNew} importLink />;
   return (
     <div className="card flat jcard" style={{ '--i': 0 }}>
       <div className="jbar">

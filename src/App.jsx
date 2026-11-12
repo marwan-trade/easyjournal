@@ -8,6 +8,7 @@ import Journal from './pages/Journal.jsx';
 import Analysis from './pages/Analysis.jsx';
 import Ideas from './pages/Ideas.jsx';
 import Profile from './pages/Profile.jsx';
+import Settings from './pages/Settings.jsx';
 import TradeDetail from './components/TradeDetail.jsx';
 import AuthPage from './components/AuthPage.jsx';
 import DepositGate from './components/DepositGate.jsx';
@@ -15,12 +16,14 @@ import ProfileMenu from './components/ProfileMenu.jsx';
 import { startAutoSync, useSyncStatus, signOut } from './sync.js';
 import { parseRecoveryHash } from './core/sync/client.js';
 import { MODE_LABELS } from './core/domain/trade.js';
+import { applyTheme } from './theme.js';
 
 const ROUTES = [
   { path: '/', title: 'Tableau de bord', short: 'Accueil', icon: '▦', Page: Dashboard },
   { path: '/trades', title: 'Journal', icon: '☰', Page: Journal },
   { path: '/analysis', title: 'Analyse', icon: '▥', Page: Analysis },
   { path: '/ideas', title: 'Idées', icon: '✦', Page: Ideas },
+  { path: '/settings', title: 'Paramètres', short: 'Réglages', icon: '⚙', Page: Settings },
   { path: '/profile', title: 'Profil', icon: '◉', Page: Profile, hidden: true },
 ];
 
@@ -58,7 +61,9 @@ export default function App() {
     addEventListener('keydown', onKey); return () => removeEventListener('keydown', onKey);
   }, [openNew]);
 
-  const route = ROUTES.find((r) => r.path === (path === '/settings' ? '/profile' : path)) ?? ROUTES[0];
+  useEffect(() => { if (state.ready) applyTheme(state.settings.theme); }, [state.ready, state.settings.theme]);
+
+  const route = ROUTES.find((r) => r.path === path) ?? ROUTES[0];
   const { Page } = route;
   if (err) return <main style={{ padding: 24 }}><h1>Erreur de chargement</h1><p>{err}</p></main>;
   if (!state.ready) return null;
@@ -85,7 +90,7 @@ export default function App() {
             <div className="actions">
               {state.settings.backtest && <div className="seg" role="group" aria-label="Mode">{['reel', 'backtest'].map((m) => <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => saveSettings({ mode: m })}>{MODE_LABELS[m]}</button>)}</div>}
               <button className="btn primary" onClick={openNew}>+ Nouveau trade</button>
-              <ProfileMenu email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} />
+              <ProfileMenu name={state.settings.displayName} email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} />
             </div>
           </header>
           <Page key={route.path + mode} state={state} onNew={openNew} onEdit={(trade) => setForm({ trade, view: true })} />
