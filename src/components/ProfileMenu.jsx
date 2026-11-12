@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 export const initialOf = (name, email) => (String(name || '').trim()[0] || String(email || '')[0] || 'I').toUpperCase();
 
 /** Bouton profil : menu avec accès aux Réglages et déconnexion (ou connexion si on est en mode invité). */
-export default function ProfileMenu({ name, email, signedIn, onSignOut, onSignIn }) {
+export default function ProfileMenu({ name, email, signedIn, onSignOut, onSignIn, variant = 'side' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -16,9 +16,10 @@ export default function ProfileMenu({ name, email, signedIn, onSignOut, onSignIn
   }, [open]);
   const initial = initialOf(name, signedIn ? email : '');
   return (
-    <div className="profile" ref={ref}>
+    <div className={`profile ${variant}`} ref={ref}>
       <button type="button" aria-label="Profil" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <span className="av" aria-hidden="true">{initial}</span>
+        {variant === 'side' && <span className="nm lbl">{name || (signedIn && email ? email : 'Invité')}</span>}
       </button>
       {open && (
         <div className="menu" role="menu">

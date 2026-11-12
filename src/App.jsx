@@ -78,19 +78,19 @@ export default function App() {
       <a className="skip" href="#main">Aller au contenu</a>
       <div className={`app${navOpen ? '' : ' navclosed'}`}>
         <aside>
-          <div className="brand"><Logo size={32} /><span className="lbl">Easy<b>Journal</b></span></div>
+          <a className="brand" href="#/" aria-label="EasyJournal : retour au tableau de bord" title="Tableau de bord"><Logo size={32} /><span className="lbl">Easy<b>Journal</b></span></a>
+          <div className="sideuser"><ProfileMenu variant="side" name={state.settings.displayName} email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} /></div>
           <nav className="side" id="main-nav" aria-label="Navigation principale">{ROUTES.filter((r) => !r.hidden).map((r) => <a key={r.path} href={`#${r.path}`} className={r === route ? 'on' : ''} aria-current={r === route ? 'page' : undefined}><span aria-hidden="true">{r.icon}</span><span className="lbl">{r.title}</span></a>)}</nav>
           <div className="hint lbl">Raccourci : <kbd>n</kbd> = nouveau trade</div>
         </aside>
         <main id="main" tabIndex={-1}>
-          <div className="mobilebrand"><Logo size={26} /><span>EasyJournal</span></div>
+          <div className="mobilebrand"><ProfileMenu variant="mobile" name={state.settings.displayName} email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} /><a href="#/" className="mbrand" aria-label="EasyJournal : retour au tableau de bord"><Logo size={26} /><span>EasyJournal</span></a></div>
           {!((state.settings.initialCapital[mode] || 0) > 0) && <div className="remind" role="status"><span><b>Dépôt manquant.</b> Écris l'argent mis sur ton compte : sans lui, ton argent actuel et tes gains ne s'affichent pas.</span><button type="button" className="btn primary" onClick={() => { try { localStorage.removeItem('easyjournal.skipDeposit'); } catch { /* ignoré */ } setSkipDeposit(false); }}>Écrire mon dépôt</button></div>}
           <header className="top">
             <div className="tl"><button type="button" className="navtoggle" onClick={toggleNav} aria-expanded={navOpen} aria-controls="main-nav" aria-label={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'} title={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'}>{navOpen ? '«' : '»'}</button><h1><small>{state.settings.backtest ? `Mode ${MODE_LABELS[mode]} · ` : ''}{state.settings.currency}</small>{route.title}</h1></div>
             <div className="actions">
               {state.settings.backtest && <div className="seg" role="group" aria-label="Mode">{['reel', 'backtest'].map((m) => <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => saveSettings({ mode: m })}>{MODE_LABELS[m]}</button>)}</div>}
               <button className="btn primary" onClick={openNew}>+ Nouveau trade</button>
-              <ProfileMenu name={state.settings.displayName} email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} />
             </div>
           </header>
           <Page key={route.path + mode} state={state} onNew={openNew} onEdit={(trade) => setForm({ trade, view: true })} />
