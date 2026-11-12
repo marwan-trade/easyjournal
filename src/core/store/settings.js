@@ -1,4 +1,3 @@
-import { FEATURES } from '../../config.js';
 /** Réglages par défaut et fusion sûre avec ce qui est stocké (ajout de nouvelles clés sans rien casser). */
 
 export const SCHEMA_VERSION = 1;
@@ -6,6 +5,7 @@ export const SCHEMA_VERSION = 1;
 export const DEFAULT_SETTINGS = {
   theme: 'auto', // 'auto' | 'light' | 'dark'
   mode: 'reel', // mode affiché
+  backtest: false, // interface Backtesting ouverte (bouton dans le profil) ; fermée = tout est en réel
   currency: 'USD',
   initialCapital: { reel: 0, backtest: 0 },
   defaultLots: 0.01, // lot utilisé pour estimer l'argent quand un trade n'a pas de lots (0 = ne pas estimer)
@@ -37,7 +37,7 @@ export function mergeSettings(stored) {
       out[key] = val;
     }
   }
-  if (!['reel', 'backtest'].includes(out.mode) || !FEATURES.backtest) out.mode = 'reel';
+  if (!['reel', 'backtest'].includes(out.mode) || !out.backtest) out.mode = 'reel';
   if (!['auto', 'light', 'dark'].includes(out.theme)) out.theme = 'auto';
   out.currency = String(out.currency || 'USD').toUpperCase().slice(0, 8);
   if (!(out.defaultLots >= 0)) out.defaultLots = DEFAULT_SETTINGS.defaultLots;

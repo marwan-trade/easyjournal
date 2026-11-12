@@ -13,7 +13,6 @@ import AuthPage from './components/AuthPage.jsx';
 import DepositGate from './components/DepositGate.jsx';
 import ProfileMenu from './components/ProfileMenu.jsx';
 import { startAutoSync, useSyncStatus, signOut } from './sync.js';
-import { FEATURES } from './config.js';
 import { MODE_LABELS } from './core/domain/trade.js';
 
 const ROUTES = [
@@ -75,9 +74,9 @@ export default function App() {
           <div className="mobilebrand"><Logo size={26} /><span>EasyJournal</span></div>
           {!((state.settings.initialCapital[mode] || 0) > 0) && <div className="remind" role="status"><span><b>Dépôt manquant.</b> Écris l'argent mis sur ton compte : sans lui, ton argent actuel et tes gains ne s'affichent pas.</span><button type="button" className="btn primary" onClick={() => { try { localStorage.removeItem('easyjournal.skipDeposit'); } catch { /* ignoré */ } setSkipDeposit(false); }}>Écrire mon dépôt</button></div>}
           <header className="top">
-            <div className="tl"><button type="button" className="navtoggle" onClick={toggleNav} aria-expanded={navOpen} aria-controls="main-nav" aria-label={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'} title={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'}>{navOpen ? '«' : '»'}</button><h1><small>{FEATURES.backtest ? `Mode ${MODE_LABELS[mode]} · ` : ''}{state.settings.currency}</small>{route.title}</h1></div>
+            <div className="tl"><button type="button" className="navtoggle" onClick={toggleNav} aria-expanded={navOpen} aria-controls="main-nav" aria-label={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'} title={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'}>{navOpen ? '«' : '»'}</button><h1><small>{state.settings.backtest ? `Mode ${MODE_LABELS[mode]} · ` : ''}{state.settings.currency}</small>{route.title}</h1></div>
             <div className="actions">
-              {FEATURES.backtest && <div className="seg" role="group" aria-label="Mode">{['reel', 'backtest'].map((m) => <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => saveSettings({ mode: m })}>{MODE_LABELS[m]}</button>)}</div>}
+              {state.settings.backtest && <div className="seg" role="group" aria-label="Mode">{['reel', 'backtest'].map((m) => <button key={m} className={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => saveSettings({ mode: m })}>{MODE_LABELS[m]}</button>)}</div>}
               <button className="btn primary" onClick={openNew}>+ Nouveau trade</button>
               <ProfileMenu email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} />
             </div>

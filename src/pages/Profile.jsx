@@ -10,7 +10,6 @@ import ImportFlow, { prepareImport } from '../components/ImportFlow.jsx';
 import { toast } from '../components/toast.jsx';
 import SyncPanel from '../components/SyncPanel.jsx';
 import { MODE_LABELS } from '../core/domain/trade.js';
-import { FEATURES } from '../config.js';
 import { useSyncStatus } from '../sync.js';
 
 function download(name, content, type) {
@@ -29,7 +28,7 @@ function CapitalCard({ settings: s }) {
     const v = Math.max(0, num(draft[mode]));
     if (v === (s.initialCapital[mode] || 0)) return;
     await saveSettings({ initialCapital: { ...s.initialCapital, [mode]: v } });
-    toast(FEATURES.backtest ? `Capital ${MODE_LABELS[mode].toLowerCase()} enregistré.` : "Argent en dépôt enregistré.");
+    toast(s.backtest ? `Capital ${MODE_LABELS[mode].toLowerCase()} enregistré.` : "Argent en dépôt enregistré.");
   };
   const commitLots = async () => {
     const v = Math.max(0, num(draft.lots));
@@ -50,12 +49,32 @@ function CapitalCard({ settings: s }) {
       <p className="sub">L'argent mis sur ton compte de trading. Le tableau de bord affiche l'argent actuel : dépôt + gains − pertes réels (le « Solde réel » de chaque trade).</p>
       <div className="capform">
         {field('reel', 'Argent en dépôt', "L'argent réellement déposé chez ton courtier : il s'affiche en haut du tableau de bord.")}
-        {FEATURES.backtest && field('backtest', 'Capital backtest (virtuel)', "L'argent fictif avec lequel tu fais tes backtests.")}
+        {s.backtest && field('backtest', 'Capital backtest (virtuel)', "L'argent fictif avec lequel tu fais tes backtests.")}
         <label className="f">Lot par défaut
           <input inputMode="decimal" placeholder="0,01" value={draft.lots} onChange={(e) => setDraft((d) => ({ ...d, lots: e.target.value }))}
             onBlur={commitLots} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }} />
           <small>Utilisé pour calculer l'argent quand tu ne saisis pas les lots d'un trade (0 = ne pas estimer).</small>
         </label>
+      </div>
+    </section>
+  );
+}
+
+/** Ouvre ou ferme l'interface Backtesting (mêmes fonctionnalités que le réel, avec son propre dépôt virtuel). */
+function BacktestCard({ settings: s }) {
+  const open = async () => { await saveSettings({ backtest: true, mode: 'backtest' }); window.location.hash = '#/'; toast('Interface Backtesting ouverte. Tu peux revenir au réel avec le sélecteur en haut.'); };
+  const toReal = async () => { await saveSettings({ mode: 'reel' }); window.location.hash = '#/'; };
+  const close = async () => { await saveSettings({ backtest: false, mode: 'reel' }); toast('Interface Backtesting masquée (tes trades de backtest sont gardés).'); };
+  return (
+    <section className="card" id="sec-backtest" style={{ '--i': 2 }}>
+      <h2>Backtesting</h2>
+      <p className="sub">Un espace séparé du réel, avec les mêmes fonctionnalités (journal, tableau de bord, import) et son propre dépôt virtuel. Rien n'est mélangé avec ton compte réel.</p>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+        {!s.backtest
+          ? <button type="button" className="btn primary" onClick={open}>Ouvrir l'interface Backtesting →</button>
+          : <>
+            {s.mode !== 'backtest' ? <button type="button" className="btn primary" onClick={open}>Aller au Backtesting →</button> : <button type="button" className="btn primary" onClick={toReal}>Revenir au réel →</button>}
+            <button type="button" className="btn" onClick={close}>Masquer le Backtesting</button></>}
       </div>
     </section>
   );
@@ -79,11 +98,12 @@ export default function Profile({ state }) {
       <section className="card phero" style={{ '--i': 0 }}>
         <span className="av big" aria-hidden="true">{initial}</span>
         <div><h2>{sync.signedIn && sync.email ? sync.email : 'Mode invité'}</h2><p className="sub">{status} · tous les réglages de ta plateforme sont ici.</p></div>
-        <nav className="pnav" aria-label="Sections du profil">{[['sec-compte', 'Compte'], ['sec-capital', 'Dépôt et lot'], ['sec-donnees', 'Données']].map(([id, l]) => <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{l}</button>)}</nav>
+        <nav className="pnav" aria-label="Sections du profil">{[['sec-compte', 'Compte'], ['sec-capital', 'Dépôt et lot'], ['sec-backtest', 'Backtesting'], ['sec-donnees', 'Données']].map(([id, l]) => <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{l}</button>)}</nav>
       </section>
       <div id="sec-compte"><SyncPanel /></div>
       <div id="sec-capital">
       <CapitalCard settings={s} />
+      <BacktestCard settings={s} />
       </div>
       <section className="card" id="sec-donnees" style={{ '--i': 1 }}>
         <h2>Données</h2>

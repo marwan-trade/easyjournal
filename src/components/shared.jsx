@@ -1,11 +1,11 @@
 import { signedPips } from '../core/domain/trade.js';
 import { formatNumber, formatPercent } from '../format.js';
-import { addTradesRaw } from '../store.js';
+import { addTradesRaw, state } from '../store.js';
 import { demoTrades } from '../core/demo.js';
 import { toast } from './toast.jsx';
 
 export async function loadDemoData() {
-  const n = await addTradesRaw(demoTrades());
+  const n = await addTradesRaw(demoTrades({ backtest: state.settings.backtest }));
   toast(n ? `${n} trades fictifs ajoutés. Tu pourras les supprimer dans ton profil.` : 'Les données de démo sont déjà chargées.');
 }
 

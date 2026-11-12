@@ -207,7 +207,7 @@ const num = (v) => {
 
 /** Cherche, dans la feuille « Résumé », le dépôt « Réel » et le lot par défaut (valeur dans la cellule à droite du libellé). */
 export function readSummarySettings(sheets) {
-  const out = { deposit: null, defaultLots: null };
+  const out = { deposit: null, backtestDeposit: null, defaultLots: null };
   const sheet = sheets.find((s) => /^resume/.test(strip(s.name)));
   if (!sheet) return out;
   for (const row of sheet.rows) {
@@ -216,6 +216,7 @@ export function readSummarySettings(sheets) {
     const v = num(row[1]);
     if (!(v > 0)) continue;
     if (/^reel/.test(label) && /argent|compte|depot/.test(label)) out.deposit = v;
+    else if (/^backtest/.test(label) && /argent|compte|depot/.test(label)) out.backtestDeposit = v;
     else if (/lotpardefaut/.test(label)) out.defaultLots = v;
   }
   return out;
