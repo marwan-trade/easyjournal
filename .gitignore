@@ -4,6 +4,7 @@ _site/
 .DS_Store
 # Tes données ne doivent JAMAIS être dans le dépôt : exports et sauvegardes restent en local.
 *.xlsx
+!public/assets/modele-journal.xlsx
 !tests/fixtures/sample.xlsx
 !tests/fixtures/sample_lo.xlsx
 !tests/fixtures/sample_images.xlsx
