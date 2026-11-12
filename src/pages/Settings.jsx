@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { saveSettings, wipeAll, deleteTradesWhere } from '../store.js';
+import { useEffect, useState } from 'react';
+import { saveSettings, wipeAll, deleteTradesWhere, snapshotNow, getSnapshots, restoreSnapshot } from '../store.js';
+import { download, downloadBackup, daysSince } from '../components/backup.js';
 import { isDemo } from '../core/demo.js';
-import { buildBackup } from '../core/io/json.js';
 import { stringifyCSV } from '../core/io/csv.js';
 import { tradesToRows } from '../core/io/mapping.js';
 import { buildJournalXlsx, JOURNAL_FILENAME } from '../core/io/journalXlsx.js';
@@ -9,13 +9,9 @@ import Dialog from '../components/Dialog.jsx';
 import ImportFlow, { prepareImport } from '../components/ImportFlow.jsx';
 import { toast } from '../components/toast.jsx';
 import { MODE_LABELS } from '../core/domain/trade.js';
+import About from '../components/About.jsx';
 import { pipValueInfo } from '../core/domain/money.js';
 
-function download(name, content, type) {
-  const url = URL.createObjectURL(new Blob([content], { type: content instanceof Uint8Array ? type : `${type};charset=utf-8` }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: name });
-  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 const num = (v) => { const n = Number(String(v).replace(/[\s\u00a0\u202f]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 /** Journal Excel « version finale » : tes trades (Réel et Backtesting), tes dépôts et tes réglages dans le modèle. */
@@ -163,6 +159,32 @@ function ListsCard({ settings: s }) {
   );
 }
 
+const dateFr = (t) => new Date(t).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+/** Instantanés automatiques (dans ce navigateur) : revenir à une version d'un jour précédent. */
+function SnapshotsCard({ state }) {
+  const [list, setList] = useState([]);
+  const [pick, setPick] = useState(null);
+  useEffect(() => { getSnapshots().then(setList).catch(() => setList([])); }, [state.trades.length, state.rev]);
+  const last = daysSince(state.settings.lastBackupAt);
+  return (
+    <>
+      <h3>Sauvegardes</h3>
+      <p className="sub" style={{ marginBottom: 8 }}>{last === null ? "Aucune sauvegarde JSON téléchargée pour l'instant." : last === 0 ? "Dernière sauvegarde JSON : aujourd'hui." : `Dernière sauvegarde JSON : il y a ${last} jour(s).`} Chaque jour, une copie de tes trades est aussi gardée dans ce navigateur (7 dernières, sans les captures) : elle sert à revenir en arrière après une erreur. Elle reste sur cet appareil.</p>
+      {list.length === 0 ? <p className="muted">Aucun instantané pour l'instant : le premier est créé dès que tu as des trades.</p> : (
+        <ul className="snaps">{list.map((x) => <li key={x.at}><span><b>{dateFr(x.at)}</b><small>{x.counts.trades} trade(s){x.reason !== 'auto' ? ` · ${x.reason}` : ''}</small></span><button type="button" className="btn" onClick={() => setPick(x)}>Restaurer</button></li>)}</ul>
+      )}
+      {pick && (
+        <Dialog title="Restaurer cet instantané ?" onClose={() => setPick(null)} footer={<>
+          <button className="btn" onClick={() => setPick(null)}>Annuler</button>
+          <button className="btn primary" onClick={async () => { try { const c = await restoreSnapshot(pick.at); setPick(null); toast(`Instantané restauré : ${c.trades} trade(s).`); } catch (err) { toast(err.message, 'error'); } }}>Restaurer</button></>}>
+          <p>Tes trades, idées et réglages reviendront à l'état du <b>{dateFr(pick.at)}</b> ({pick.counts.trades} trade(s)). Ce qui a été ajouté depuis sera retiré. Un instantané de l'état actuel est gardé d'abord : tu pourras revenir en arrière.</p>
+        </Dialog>
+      )}
+    </>
+  );
+}
+
 export default function Settings({ state }) {
   const { settings: s } = state;
   const [prepared, setPrepared] = useState(null);
@@ -176,7 +198,7 @@ export default function Settings({ state }) {
   };
   return (
     <div className="set">
-      <nav className="pnav sticky" aria-label="Sections des paramètres">{[['sec-apparence', 'Apparence'], ['sec-capital', 'Trading'], ['sec-pips', 'Pips'], ['sec-backtest', 'Backtesting'], ['sec-listes', 'Listes'], ['sec-donnees', 'Données']].map(([id, l]) => <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{l}</button>)}</nav>
+      <nav className="pnav sticky" aria-label="Sections des paramètres">{[['sec-apparence', 'Apparence'], ['sec-capital', 'Trading'], ['sec-pips', 'Pips'], ['sec-backtest', 'Backtesting'], ['sec-listes', 'Listes'], ['sec-donnees', 'Données'], ['sec-apropos', 'À propos']].map(([id, l]) => <button key={id} type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{l}</button>)}</nav>
       <ThemeCard settings={s} />
       <div id="sec-capital">
       <CapitalCard settings={s} />
@@ -189,9 +211,10 @@ export default function Settings({ state }) {
         <p className="sub" style={{ margin: '4px 0 12px' }}>{state.persistent ? 'Tes trades sont enregistrés dans ce navigateur. Fais une sauvegarde régulière. Le journal Excel contient tes trades, tes dépôts et tes réglages de pip ; la sauvegarde JSON garde aussi les captures, les idées et tout le reste.' : 'Attention : stockage permanent indisponible (navigation privée ?). Exporte une sauvegarde.'}</p>
         <div className="row">
           <button className="btn primary" onClick={() => exportJournal(state)}>Journal Excel (version finale)</button>
-          <button className="btn" onClick={async () => { download(`easyjournal-sauvegarde-${day()}.json`, JSON.stringify(buildBackup({ trades: state.trades, ideas: state.ideas, settings: s }), null, 2), 'application/json'); await saveSettings({ lastBackupAt: Date.now() }); toast('Sauvegarde téléchargée.'); }}>Sauvegarde complète (JSON)</button>
+          <button className="btn" onClick={() => downloadBackup(state)}>Sauvegarde complète (JSON)</button>
           <button className="btn" onClick={() => { download(`easyjournal-trades-${day()}.csv`, stringifyCSV(tradesToRows([...state.trades].sort((a, b) => (a.date < b.date ? -1 : 1)), s.customFields)), 'text/csv'); toast('CSV téléchargé.'); }}>Tous les trades (CSV)</button>
         </div>
+        <SnapshotsCard state={state} />
         {state.trades.some(isDemo) && <>
           <h3>Anciennes données de démonstration</h3>
           <p className="sub" style={{ marginBottom: 8 }}>Des trades fictifs ajoutés par une ancienne version sont encore là. Tu peux les supprimer sans toucher à tes vrais trades.</p>
@@ -207,12 +230,13 @@ export default function Settings({ state }) {
         <h3>Zone dangereuse</h3>
         <button className="btn danger" onClick={() => { setConfirm(''); setWipe(true); }}>Effacer toutes mes données</button>
       </section>
+      <About />
       <p className="muted" style={{ textAlign: 'center' }}>EasyJournal v0.3</p>
       {prepared && <ImportFlow prepared={prepared} onClose={() => setPrepared(null)} />}
       {wipeMode && (
         <Dialog title={`Supprimer tous les trades ${MODE_LABELS[wipeMode]} ?`} onClose={() => setWipeMode(null)} footer={<>
           <button className="btn" onClick={() => setWipeMode(null)}>Annuler</button>
-          <button className="btn danger" disabled={confirm.trim().toUpperCase() !== 'SUPPRIMER'} onClick={async () => { const m = wipeMode; const n = await deleteTradesWhere((t) => t.mode === m); setWipeMode(null); toast(`${n} trade(s) ${MODE_LABELS[m]} supprimé(s).`); }}>Supprimer</button></>}>
+          <button className="btn danger" disabled={confirm.trim().toUpperCase() !== 'SUPPRIMER'} onClick={async () => { const m = wipeMode; await snapshotNow(`avant suppression du ${MODE_LABELS[m]}`); const n = await deleteTradesWhere((t) => t.mode === m); setWipeMode(null); toast(`${n} trade(s) ${MODE_LABELS[m]} supprimé(s).`); }}>Supprimer</button></>}>
           <p>Les {state.trades.filter((t) => t.mode === wipeMode).length} trades du mode {MODE_LABELS[wipeMode]} seront supprimés de cet appareil, et aussi de ton compte en ligne si tu es connecté. Les trades de l'autre mode et ton dépôt ne changent pas. Action définitive : exporte d'abord une sauvegarde.</p>
           <label className="f" style={{ marginTop: 12 }}>Tape SUPPRIMER pour confirmer<input value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" /></label>
         </Dialog>
@@ -220,7 +244,7 @@ export default function Settings({ state }) {
       {wipe && (
         <Dialog title="Effacer toutes les données ?" onClose={() => setWipe(false)} footer={<>
           <button className="btn" onClick={() => setWipe(false)}>Annuler</button>
-          <button className="btn danger" disabled={confirm.trim() !== 'EFFACER'} onClick={async () => { await wipeAll(); setWipe(false); toast('Toutes les données ont été effacées.'); }}>Tout effacer</button></>}>
+          <button className="btn danger" disabled={confirm.trim() !== 'EFFACER'} onClick={async () => { await snapshotNow('avant effacement total'); await wipeAll(); setWipe(false); toast('Toutes les données ont été effacées.'); }}>Tout effacer</button></>}>
           <p>Tous tes trades, idées et réglages seront supprimés de cet appareil, et aussi de ton compte en ligne si tu es connecté. Action définitive : exporte d'abord une sauvegarde.</p>
           <label className="f" style={{ marginTop: 12 }}>Tape EFFACER pour confirmer<input value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" /></label>
         </Dialog>

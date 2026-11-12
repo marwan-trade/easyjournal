@@ -17,6 +17,7 @@ import { startAutoSync, useSyncStatus, signOut } from './sync.js';
 import { parseRecoveryHash } from './core/sync/client.js';
 import { MODE_LABELS } from './core/domain/trade.js';
 import { applyTheme } from './theme.js';
+import { backupDue, downloadBackup } from './components/backup.js';
 
 const ROUTES = [
   { path: '/', title: 'Tableau de bord', short: 'Accueil', icon: '▦', Page: Dashboard },
@@ -65,6 +66,10 @@ export default function App() {
 
   const route = ROUTES.find((r) => r.path === path) ?? ROUTES[0];
   const { Page } = route;
+  const snoozed = (() => { try { return Date.now() < Number(localStorage.getItem('easyjournal.backupSnooze') || 0); } catch { return false; } })();
+  const [, bump] = useState(0);
+  const showBackup = backupDue(state.settings, state.trades.length) && !snoozed;
+  const snooze = () => { try { localStorage.setItem('easyjournal.backupSnooze', String(Date.now() + 86400000)); } catch { /* ignoré */ } bump((n) => n + 1); };
   if (err) return <main style={{ padding: 24 }}><h1>Erreur de chargement</h1><p>{err}</p></main>;
   if (!state.ready) return null;
   if (sync.configured && (recovery || (!sync.signedIn && !guest))) return <><div className="bg" aria-hidden="true"><i /><i /><i /></div><AuthPage onGuest={continueAsGuest} recovery={recovery} onRecovered={() => setRecovery(null)} /><Toasts /></>;
@@ -86,6 +91,7 @@ export default function App() {
         <main id="main" tabIndex={-1}>
           <div className="mobilebrand"><ProfileMenu variant="mobile" name={state.settings.displayName} email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} /><a href="#/" className="mbrand" aria-label="EasyJournal : retour au tableau de bord"><Logo size={26} /><span>EasyJournal</span></a></div>
           {!((state.settings.initialCapital[mode] || 0) > 0) && <div className="remind" role="status"><span><b>Dépôt manquant.</b> Écris l'argent mis sur ton compte : sans lui, ton argent actuel et tes gains ne s'affichent pas.</span><button type="button" className="btn primary" onClick={() => { try { localStorage.removeItem('easyjournal.skipDeposit'); } catch { /* ignoré */ } setSkipDeposit(false); }}>Écrire mon dépôt</button></div>}
+          {showBackup && <div className="remind" role="status"><span><b>Pense à sauvegarder.</b> Ta dernière sauvegarde date de plus d'une semaine (ou n'existe pas encore). Un fichier JSON garde tes trades et tes captures en lieu sûr.</span><span className="remact"><button type="button" className="btn primary" onClick={() => downloadBackup(state).then(() => bump((n) => n + 1))}>Sauvegarder maintenant</button><button type="button" className="btn" onClick={snooze}>Plus tard</button></span></div>}
           <header className="top">
             <div className="tl"><button type="button" className="navtoggle" onClick={toggleNav} aria-expanded={navOpen} aria-controls="main-nav" aria-label={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'} title={navOpen ? 'Fermer le menu' : 'Ouvrir le menu'}>{navOpen ? '«' : '»'}</button><h1><small>{state.settings.backtest ? `Mode ${MODE_LABELS[mode]} · ` : ''}{state.settings.currency}</small>{route.title}</h1></div>
             <div className="actions">

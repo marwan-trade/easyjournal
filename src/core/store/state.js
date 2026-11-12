@@ -7,6 +7,7 @@ import { openDatabase } from './db.js';
 import { DEFAULT_SETTINGS, SCHEMA_VERSION, mergeSettings, withSuggestion } from './settings.js';
 import { normalizeTrade, newId, dedupeKey } from '../domain/trade.js';
 import { isDemoId } from '../sync/engine.js';
+import { takeSnapshot, listSnapshots, withCurrentShots } from './snapshots.js';
 
 const listeners = new Set();
 let db = null;
@@ -40,6 +41,19 @@ export async function init(backend = null) {
   // Migrations de DONNÉES futures : if (schema.value < 2) { ...transformer state.trades... }
   state.ready = true;
   emit();
+  snapshotNow('auto', false).catch(() => {}); // instantané du jour (ne bloque jamais le démarrage)
+}
+
+/* ----- Instantanés (retour en arrière) ----- */
+export const snapshotNow = (reason = 'auto', force = true) => takeSnapshot(db, state, { reason, force });
+export const getSnapshots = () => listSnapshots(db);
+/** Revient à un instantané : remplace trades, idées et réglages, en gardant les captures actuelles. */
+export async function restoreSnapshot(at) {
+  const snap = (await listSnapshots(db)).find((x) => x.at === at);
+  if (!snap) throw new Error('Instantané introuvable.');
+  await snapshotNow('avant restauration'); // on peut revenir sur son pas
+  await restoreBackup({ trades: withCurrentShots(snap.trades, state.trades).map((t) => normalizeTrade(t)), ideas: snap.ideas, settings: snap.settings });
+  return snap.counts;
 }
 
 /* ----- Pierres tombales : mémorisent les suppressions pour les propager aux autres appareils ----- */

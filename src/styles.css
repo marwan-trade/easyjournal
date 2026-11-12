@@ -247,6 +247,7 @@ td.bal{color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
 .av.big{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--gold),var(--amber));color:#1a1204;font-weight:700;font-size:1.8rem;font-family:var(--serif)}
 .pnav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
 .pnav button{background:none;cursor:pointer;padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:.85rem;color:inherit;text-decoration:none}
+.pnav.sticky{margin-left:0;width:100%;background:var(--bg)}
 .pnav button:hover{background:rgba(245,185,66,.12)}
 /* Journal : mise en page sobre */
 .card.flat:hover{transform:none;box-shadow:none}
@@ -467,3 +468,15 @@ a.brand:hover{opacity:.85}
 .plabel b{font-family:var(--serif);font-weight:600}.plabel b::first-letter{text-transform:uppercase}
 .plabel small{color:var(--muted);font-size:.78rem}
 @media(max-width:700px){.periodbar{flex-direction:column;align-items:stretch}.pnavbar{justify-content:space-between}.plabel{flex:1}.pnavbar .btn:last-child{flex:1 1 100%}}
+
+/* ===== À propos de moi ===== */
+.aboutrow{display:flex;align-items:center;gap:16px;margin:10px 0 14px}
+.flag{flex:none;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.aname{font-family:var(--serif);font-size:1.25rem;font-weight:600;display:block}
+.aboutcontact{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.aboutcontact .k{margin-right:4px}
+.aboutcontact .btn{text-decoration:none;color:inherit}
+.remact{display:flex;gap:8px;flex-wrap:wrap}
+.snaps{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.snaps li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.snaps li span{display:grid}.snaps li small{color:var(--muted)}
