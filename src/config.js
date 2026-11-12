@@ -13,4 +13,6 @@ export const AUTHOR = {
   name: 'Marwan Abdi Hassan',
   nationality: 'Djiboutien',
   phone: '+253 77 25 77 77',
+  // Liens de réseaux sociaux : une icône n'apparaît que si son lien est rempli (https://…).
+  socials: { instagram: '', facebook: '', tiktok: '', x: '', youtube: '', telegram: '', linkedin: '', snapchat: '' },
 };

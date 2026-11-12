@@ -487,3 +487,4 @@ a.brand:hover{opacity:.85}
 .jc1 b{font-size:1.05rem}.jc1 .muted{margin-right:auto}.jcp{font-weight:700;font-variant-numeric:tabular-nums}
 .jc2{font-size:.85rem}.jc3{font-size:.8rem}
 @media (max-width:700px){.jcards{display:grid}.jscroll{display:none}}
+.btn.social{padding:8px 10px;display:inline-flex;align-items:center}
