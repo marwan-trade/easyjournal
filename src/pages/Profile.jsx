@@ -88,6 +88,7 @@ export default function Profile({ state }) {
   const [prepared, setPrepared] = useState(null);
   const [wipe, setWipe] = useState(false);
   const [confirm, setConfirm] = useState('');
+  const [wipeMode, setWipeMode] = useState(null); // 'reel' | 'backtest' : suppression d'un seul mode
   const onFile = async (e) => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;
@@ -121,11 +122,24 @@ export default function Profile({ state }) {
         <h3>Importer</h3>
         <p className="sub" style={{ marginBottom: 8 }}>Journal Excel (.xlsx, feuille « Réel »), CSV ou sauvegarde JSON. Un aperçu s'affiche avant toute modification.</p>
         <input type="file" accept=".xlsx,.csv,.txt,.json" onChange={onFile} aria-label="Fichier à importer" />
+        <h3>Supprimer les trades d'un mode</h3>
+        <p className="sub" style={{ marginBottom: 8 }}>Le Réel et le Backtesting se suppriment séparément : l'autre mode n'est pas touché. Ton dépôt reste enregistré.</p>
+        <div className="row">
+          {['reel', 'backtest'].map((m) => <button key={m} className="btn danger" disabled={!state.trades.some((t) => t.mode === m)} onClick={() => { setConfirm(''); setWipeMode(m); }}>Supprimer le {MODE_LABELS[m]} ({state.trades.filter((t) => t.mode === m).length})</button>)}
+        </div>
         <h3>Zone dangereuse</h3>
         <button className="btn danger" onClick={() => { setConfirm(''); setWipe(true); }}>Effacer toutes mes données</button>
       </section>
       <p className="muted" style={{ textAlign: 'center' }}>EasyJournal v0.3</p>
       {prepared && <ImportFlow prepared={prepared} onClose={() => setPrepared(null)} />}
+      {wipeMode && (
+        <Dialog title={`Supprimer tous les trades ${MODE_LABELS[wipeMode]} ?`} onClose={() => setWipeMode(null)} footer={<>
+          <button className="btn" onClick={() => setWipeMode(null)}>Annuler</button>
+          <button className="btn danger" disabled={confirm.trim().toUpperCase() !== 'SUPPRIMER'} onClick={async () => { const m = wipeMode; const n = await deleteTradesWhere((t) => t.mode === m); setWipeMode(null); toast(`${n} trade(s) ${MODE_LABELS[m]} supprimé(s).`); }}>Supprimer</button></>}>
+          <p>Les {state.trades.filter((t) => t.mode === wipeMode).length} trades du mode {MODE_LABELS[wipeMode]} seront supprimés de cet appareil, et aussi de ton compte en ligne si tu es connecté. Les trades de l'autre mode et ton dépôt ne changent pas. Action définitive : exporte d'abord une sauvegarde.</p>
+          <label className="f" style={{ marginTop: 12 }}>Tape SUPPRIMER pour confirmer<input value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" /></label>
+        </Dialog>
+      )}
       {wipe && (
         <Dialog title="Effacer toutes les données ?" onClose={() => setWipe(false)} footer={<>
           <button className="btn" onClick={() => setWipe(false)}>Annuler</button>
