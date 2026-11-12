@@ -79,9 +79,9 @@ export default function App() {
       <div className={`app${navOpen ? '' : ' navclosed'}`}>
         <aside>
           <a className="brand" href="#/" aria-label="EasyJournal : retour au tableau de bord" title="Tableau de bord"><Logo size={32} /><span className="lbl">Easy<b>Journal</b></span></a>
-          <div className="sideuser"><ProfileMenu variant="side" name={state.settings.displayName} email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} /></div>
           <nav className="side" id="main-nav" aria-label="Navigation principale">{ROUTES.filter((r) => !r.hidden).map((r) => <a key={r.path} href={`#${r.path}`} className={r === route ? 'on' : ''} aria-current={r === route ? 'page' : undefined}><span aria-hidden="true">{r.icon}</span><span className="lbl">{r.title}</span></a>)}</nav>
           <div className="hint lbl">Raccourci : <kbd>n</kbd> = nouveau trade</div>
+          <div className="sideuser"><ProfileMenu variant="side" name={state.settings.displayName} email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} /></div>
         </aside>
         <main id="main" tabIndex={-1}>
           <div className="mobilebrand"><ProfileMenu variant="mobile" name={state.settings.displayName} email={sync.email} signedIn={sync.signedIn} onSignOut={logout} onSignIn={leaveGuest} /><a href="#/" className="mbrand" aria-label="EasyJournal : retour au tableau de bord"><Logo size={26} /><span>EasyJournal</span></a></div>

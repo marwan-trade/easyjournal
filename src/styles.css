@@ -453,3 +453,6 @@ a.brand:hover{opacity:.85}
 .mobilebrand .profile.mobile>button{padding:3px}
 .mobilebrand .profile.mobile .av{width:30px;height:30px;font-size:.9rem}
 .mobilebrand .profile{font-family:var(--sans)}
+.sideuser{padding-top:12px;border-top:1px solid var(--line)}
+.sideuser .profile .menu{top:auto;bottom:calc(100% + 8px)}
+.app.navclosed .sideuser{margin-top:auto}
