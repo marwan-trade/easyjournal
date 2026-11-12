@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { tradesOf } from '../store.js';
+import { PERIODS, periodRange, shiftAnchor, inPeriod, periodLabel, todayISO } from '../core/domain/period.js';
 import { summarize } from '../core/domain/stats.js';
 import { money, signClass, formatNumber, formatPercent } from '../format.js';
 import { RateBars, Empty } from '../components/shared.jsx';
@@ -17,14 +19,40 @@ function Breakdown({ title, rows, settings, labelOf, i }) {
   );
 }
 
+/** Choix de la période analysée : jour, semaine, mois, année ou tout, avec précédent / suivant. */
+function PeriodBar({ kind, setKind, anchor, setAnchor, count }) {
+  const isAll = kind === 'all';
+  const today = todayISO();
+  return (
+    <section className="card periodbar" style={{ '--i': 0 }}>
+      <div className="seg sm" role="group" aria-label="Période">
+        {PERIODS.map(([k, l]) => <button key={k} type="button" className={kind === k ? 'on' : ''} aria-pressed={kind === k} onClick={() => { setKind(k); if (k !== 'all' && !anchor) setAnchor(today); }}>{l}</button>)}
+      </div>
+      <div className="pnavbar">
+        <button type="button" className="btn" disabled={isAll} onClick={() => setAnchor(shiftAnchor(kind, anchor, -1))} aria-label="Période précédente">‹</button>
+        <div className="plabel" aria-live="polite"><b>{periodLabel(kind, anchor)}</b><small>{count} trade{count > 1 ? 's' : ''}</small></div>
+        <button type="button" className="btn" disabled={isAll} onClick={() => setAnchor(shiftAnchor(kind, anchor, 1))} aria-label="Période suivante">›</button>
+        <button type="button" className="btn" disabled={isAll || periodRange(kind, anchor).from === periodRange(kind, today).from} onClick={() => setAnchor(today)}>Aujourd'hui</button>
+      </div>
+    </section>
+  );
+}
+
 export default function Analysis({ state }) {
   const { settings } = state;
-  const trades = tradesOf(settings.mode);
+  const [kind, setKind] = useState('all');
+  const [anchor, setAnchor] = useState(() => todayISO());
+  const all = tradesOf(settings.mode);
+  const range = periodRange(kind, anchor);
+  const trades = all.filter((t) => inPeriod(t.date, range));
   const cap = settings.initialCapital[settings.mode] || 0;
   const s = summarize(trades, settings, cap);
-  if (!s.completed) return <Empty title="Pas encore d'analyse" text="Termine quelques trades pour voir tes statistiques ici." />;
+  if (!all.length) return <Empty title="Pas encore d'analyse" text="Termine quelques trades pour voir tes statistiques ici." />;
+  const bar = <PeriodBar kind={kind} setKind={setKind} anchor={anchor} setAnchor={setAnchor} count={trades.length} />;
+  if (!s.completed) return <>{bar}<Empty title="Rien à analyser sur cette période" text={trades.length ? 'Les trades de cette période ne sont pas encore terminés.' : 'Aucun trade à cette date. Change de période avec les flèches ou choisis « Tout ».'} /></>;
   return (
     <>
+      {bar}
       <section className="grid kpis">
         <div className="card" style={{ '--i': 0 }}><div className="k">Espérance (argent)</div><div className={`v ${signClass(s.money.expectancy)}`}>{s.money.expectancy === null ? '—' : money(s.money.expectancy, settings, { sign: true })}</div><div className="sub">par trade</div></div>
         <div className="card" style={{ '--i': 1 }}><div className="k">Gain moyen</div><div className="v win">{s.money.avgWin === null ? '—' : money(s.money.avgWin, settings)}</div><div className="sub">trades gagnants</div></div>

@@ -33,9 +33,9 @@ test('export « version finale » : les trades reviennent identiques à la réim
   assert.equal(got['backtest|2026-06-15|GBPUSD'].rr, 1.95);
 });
 
-test('export : au-delà de 500 trades dans un mode, message clair', async () => {
+test('export : au-delà de la limite, message clair', async () => {
   const many = Array.from({ length: MAX_ROWS + 1 }, (_, i) => mk({ mode: 'reel', date: '2026-01-01', pair: 'EURUSD', result: 'Gagnant', pips: 1, id: `x${i}` }));
-  await assert.rejects(() => buildJournalXlsx({ trades: many, settings: mergeSettings({}), template }), /500 lignes/);
+  await assert.rejects(() => buildJournalXlsx({ trades: many, settings: mergeSettings({}), template }), /limité à 10000/);
 });
 
 const JPEG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCABaAKADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwC1RRRXzR6wUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAH/2Q==';
@@ -69,4 +69,28 @@ test('export : les captures d\'écran sont placées dans la colonne H, avec leur
   // le fichier se réimporte toujours (les captures sont lues par l'import)
   const res = workbookToTrades(await readXlsx(bytes));
   assert.equal(res.trades.length, 4);
+});
+
+test('export : plus de 500 trades — le modèle est agrandi (lignes, tableau, listes, formules du résumé)', async () => {
+  const n = 1200;
+  const trades = Array.from({ length: n }, (_, i) => mk({ mode: i % 3 ? 'reel' : 'backtest', date: `2026-${String(1 + (i % 12)).padStart(2, '0')}-${String(1 + (i % 28)).padStart(2, '0')}`, pair: 'EURUSD', scenario: 'Scénario 1', result: i % 2 ? 'Gagnant' : 'Perdant', pips: 10 + (i % 7), balance: 1 + (i % 5), id: `t${i}` }));
+  const t0 = Date.now();
+  const bytes = await buildJournalXlsx({ trades, settings: mergeSettings({ initialCapital: { reel: 100 } }), template });
+  assert.ok(Date.now() - t0 < 5000, 'export lent');
+  const zip = openZip(bytes);
+  const reelCount = trades.filter((t) => t.mode === 'reel').length; // 800 > 500 => capacité 1000
+  const s3 = await zip.readText('xl/worksheets/sheet3.xml');
+  assert.match(s3, /<dimension ref="A1:N1001"\/>/);
+  assert.match(s3, /<row r="1001"/);
+  assert.doesNotMatch(s3, /<row r="1002"/);
+  assert.match(s3, /sqref="K2:K1001"/);
+  assert.match(await zip.readText('xl/tables/table2.xml'), /ref="A1:N1001"/);
+  const s1 = await zip.readText('xl/worksheets/sheet1.xml');
+  assert.match(s1, /Réel!\$F\$2:\$F\$1001/);
+  assert.doesNotMatch(s1, /\$501\b/);
+  const res = workbookToTrades(await readXlsx(bytes));
+  assert.equal(res.trades.length, n);
+  assert.equal(res.trades.filter((t) => t.mode === 'reel').length, reelCount);
+  // la dernière ligne a bien sa formule d'estimation
+  assert.match(s3, /<c r="M1001"[^>]*><f>IF\(OR\(F1001=""/);
 });

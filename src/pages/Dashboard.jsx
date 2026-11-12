@@ -47,7 +47,7 @@ export default function Dashboard({ state, onNew, onEdit }) {
   return (
     <>
       {banner}
-      {!noDeposit && missing > 0 && <div className="remind" role="status"><span><b>{missing} trade(s) sans montant.</b> Ils n'ont ni pips ni solde réel : leur gain ou perte compte 0 $, donc la perte totale, le profit factor et le drawdown sont incomplets. Ajoute leurs pips ou leur solde dans le Journal.</span></div>}
+      {!noDeposit && missing > 0 && <div className="remind" role="status"><span><b>{missing} trade(s) sans montant.</b> Ils n'ont ni pips ni solde réel : leur gain ou perte compte 0 $, donc la perte totale, le profit factor et le drawdown sont incomplets. Pour un perdant, écris les pips perdus : la perte se calcule avec ton lot et la valeur du pip.</span><a className="btn" href="#/trades">Ouvrir le Journal</a></div>}
 
       <section className="grid kpis">
         <div className="card" style={{ '--i': 1 }}><div className="k">Réussite</div>

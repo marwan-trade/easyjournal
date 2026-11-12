@@ -7,7 +7,8 @@ import { openZip } from './xlsx.js';
 import { writeZip } from './zip.js';
 import { parseDataUrl } from '../sync/shots.js';
 
-export const MAX_ROWS = 500; // lignes prévues par feuille dans le modèle (2 à 501)
+export const BASE_ROWS = 500; // lignes prévues par feuille dans le modèle (2 à 501)
+export const MAX_ROWS = 10000; // au-delà, le fichier Excel devient lent : la sauvegarde JSON prend le relais
 export const JOURNAL_FILENAME = 'Journale de trading version finale.xlsx';
 
 const SHEETS = { backtest: 'xl/worksheets/sheet2.xml', reel: 'xl/worksheets/sheet3.xml' };
@@ -25,10 +26,7 @@ function setCell(xml, ref, build, value) {
   return re.test(xml) ? xml.replace(re, (_, s) => build(ref, s, value)) : xml;
 }
 
-function fillRow(xml, r, t, height = 0) {
-  const m = new RegExp(`<row r="${r}"[^>]*>.*?</row>`, 's').exec(xml);
-  if (!m) return xml;
-  let row = m[0];
+function fillRow(row, r, t, height = 0) {
   const pips = t.pips === null || t.pips === undefined ? null : Math.abs(t.pips);
   row = setCell(row, `A${r}`, numb, excelSerial(t.date));
   row = setCell(row, `B${r}`, text, t.pair);
@@ -43,7 +41,7 @@ function fillRow(xml, r, t, height = 0) {
   row = setCell(row, `L${r}`, numb, t.lots > 0 ? t.lots : null);
   row = setCell(row, `N${r}`, numb, t.balance !== null && t.balance !== undefined ? Math.abs(t.balance) : null);
   if (height) row = row.replace(/^<row r="\d+"/, (h) => `${h} ht="${height}" customHeight="1"`);
-  return xml.slice(0, m.index) + row + xml.slice(m.index + m[0].length);
+  return row;
 }
 
 /* ----- Captures d'écran : placées dans la colonne H (« Référence / repère du graphique »), une image par ligne ----- */
@@ -84,6 +82,19 @@ const drawingRels = (pics) => `<?xml version="1.0" encoding="UTF-8" standalone="
 /** Hauteur de ligne (points) nécessaire pour afficher l'image. */
 const rowHeightFor = (cy) => Math.min(409, Math.ceil(cy / EMU_PT) + 10);
 
+/** Agrandit une feuille du modèle jusqu'à `cap` lignes de données : lignes, dimension, listes déroulantes. */
+function growSheet(xml, cap) {
+  if (cap <= BASE_ROWS) return xml;
+  const last = cap + 1;
+  const tpl = /<row r="501"[^>]*>.*?<\/row>/s.exec(xml)?.[0];
+  if (!tpl) return xml;
+  const rows = [];
+  for (let r = BASE_ROWS + 2; r <= last; r++) rows.push(tpl.replace(/<row r="501"/, `<row r="${r}"`).replace(/([A-Z]{1,2})501\b/g, `$1${r}`));
+  return xml.replace('</sheetData>', `${rows.join('')}</sheetData>`)
+    .replace(/(<dimension ref="A1:N)501"/, `$1${last}"`)
+    .replace(/sqref="([A-Z]+)2:([A-Z]+)501"/g, `sqref="$12:$2${last}"`);
+}
+
 const byDate = (a, b) => (a.date === b.date ? (a.createdAt ?? 0) - (b.createdAt ?? 0) : a.date < b.date ? -1 : 1);
 
 function setSummaryValue(xml, ref, value) {
@@ -103,9 +114,12 @@ export async function buildJournalXlsx({ trades, settings, template }) {
   const bySheet = {};
   for (const [mode, path] of Object.entries(SHEETS)) {
     const list = trades.filter((t) => t.mode === mode).sort(byDate);
-    if (list.length > MAX_ROWS) throw new Error(`Le modèle Excel contient ${MAX_ROWS} lignes par feuille : tu as ${list.length} trades en ${mode === 'reel' ? 'Réel' : 'Backtest'}. Utilise la sauvegarde JSON pour tout garder.`);
+    if (list.length > MAX_ROWS) throw new Error(`L'export Excel est limité à ${MAX_ROWS} trades par feuille : tu as ${list.length} trades en ${mode === 'reel' ? 'Réel' : 'Backtest'}. Utilise la sauvegarde JSON pour tout garder.`);
     bySheet[path] = list;
   }
+  // capacité : 500 lignes, puis par tranches de 500 selon le mode le plus fourni
+  const biggest = Math.max(0, ...Object.values(bySheet).map((l) => l.length));
+  const cap = Math.max(BASE_ROWS, Math.ceil(biggest / BASE_ROWS) * BASE_ROWS);
   const extras = []; // fichiers ajoutés : images, dessins, relations
   const drawingOf = {}; // chemin de feuille -> numéro de dessin
   let imageCount = 0; let drawingCount = 0;
@@ -113,7 +127,9 @@ export async function buildJournalXlsx({ trades, settings, template }) {
   for (const name of names) {
     let data = await zip.read(name);
     if (bySheet[name]) {
-      let xml = td.decode(data);
+      let xml = growSheet(td.decode(data), cap);
+      const head = xml.indexOf('<row r="2"'); const tailAt = xml.indexOf('</sheetData>');
+      const rowsXml = [...xml.slice(head, tailAt).matchAll(/<row r="(\d+)"[^>]*>.*?<\/row>/gs)].map((m) => m[0]); // ligne 2, 3, 4…
       const pics = [];
       bySheet[name].forEach((t, i) => {
         const row = i + 2;
@@ -130,8 +146,9 @@ export async function buildJournalXlsx({ trades, settings, template }) {
             height = rowHeightFor(cy);
           } catch { /* capture illisible : la ligne est exportée sans image */ }
         }
-        xml = fillRow(xml, row, t, height);
+        rowsXml[i] = fillRow(rowsXml[i], row, t, height);
       });
+      xml = xml.slice(0, head) + rowsXml.join('') + xml.slice(tailAt);
       if (pics.length) {
         drawingCount += 1; drawingOf[name] = drawingCount;
         extras.push({ name: `xl/drawings/drawing${drawingCount}.xml`, data: te.encode(drawingXml(pics)) });
@@ -141,12 +158,14 @@ export async function buildJournalXlsx({ trades, settings, template }) {
       data = te.encode(xml);
     } else if (name === 'xl/worksheets/sheet1.xml') {
       let xml = td.decode(data);
+      if (cap > BASE_ROWS) xml = xml.replace(/\$501\b/g, `$${cap + 1}`);
       xml = setSummaryValue(xml, 'B31', settings.initialCapital?.backtest);
       xml = setSummaryValue(xml, 'B32', settings.initialCapital?.reel);
       xml = setSummaryValue(xml, 'B34', settings.defaultLots);
       for (const [pair, v] of Object.entries(settings.pipValues ?? {})) if (PIP_ROWS[pair]) xml = setSummaryValue(xml, `B${PIP_ROWS[pair]}`, v);
       data = te.encode(xml);
     }
+    if (cap > BASE_ROWS && /^xl\/tables\/table\d+\.xml$/.test(name)) data = te.encode(td.decode(data).replace(/A1:N501/g, `A1:N${cap + 1}`));
     out.push({ name, data });
   }
   // relations des feuilles vers leur dessin, et types de contenu des nouvelles parties

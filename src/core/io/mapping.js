@@ -22,7 +22,7 @@ const ALIASES = {
   result: ['resultat', 'result'],
   rulesFollowed: ['reglesrespectees', 'reglesrespecteesoui', 'regles'],
   rr: ['rrprevu', 'rr'],
-  pips: ['pipsgagnes', 'pips'],
+  pips: ['pipsgagnes', 'pipsgagnesperdus', 'pips'],
   lots: ['lots', 'lot'],
   risk: ['risque', 'risk'],
   pnl: ['resultatnet', 'gainperte', 'gainpertenet', 'pnl', 'profit'],
