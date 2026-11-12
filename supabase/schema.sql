@@ -1,4 +1,5 @@
--- EasyJournal : schéma Supabase. À coller UNE FOIS dans « SQL Editor » puis « Run ».
+-- EasyJournal : schéma Supabase COMPLET (trades, idées, réglages + captures d'écran).
+-- À coller en entier dans « SQL Editor » puis « Run ». Peut être relancé sans risque (rien n'est effacé).
 -- Chaque ligne appartient à un utilisateur (user_id) et n'est visible que par lui (Row Level Security).
 
 create table if not exists public.trades (
@@ -47,7 +48,7 @@ revoke all on public.trades, public.ideas, public.user_settings from anon;
 grant select, insert, update, delete on public.trades, public.ideas, public.user_settings to authenticated;
 
 -- ============================================================================
--- CAPTURES D'ÉCRAN (à coller aussi dans « SQL Editor » puis « Run ») : synchronise les images entre tous tes appareils.
+-- CAPTURES D'ÉCRAN : synchronise les images entre tous tes appareils.
 -- Bucket PRIVÉ « screenshots » ; chaque utilisateur n'accède qu'à son propre dossier (nom du dossier = son identifiant).
 -- ============================================================================
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
