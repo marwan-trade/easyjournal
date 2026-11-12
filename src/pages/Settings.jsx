@@ -4,6 +4,7 @@ import { isDemo } from '../core/demo.js';
 import { buildBackup } from '../core/io/json.js';
 import { stringifyCSV } from '../core/io/csv.js';
 import { tradesToRows } from '../core/io/mapping.js';
+import { buildJournalXlsx, JOURNAL_FILENAME } from '../core/io/journalXlsx.js';
 import Dialog from '../components/Dialog.jsx';
 import ImportFlow, { prepareImport } from '../components/ImportFlow.jsx';
 import { toast } from '../components/toast.jsx';
@@ -11,11 +12,22 @@ import { MODE_LABELS } from '../core/domain/trade.js';
 import { pipValueInfo } from '../core/domain/money.js';
 
 function download(name, content, type) {
-  const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
+  const url = URL.createObjectURL(new Blob([content], { type: content instanceof Uint8Array ? type : `${type};charset=utf-8` }));
   const a = Object.assign(document.createElement('a'), { href: url, download: name });
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 const num = (v) => { const n = Number(String(v).replace(/[\s\u00a0\u202f]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+/** Journal Excel « version finale » : tes trades (Réel et Backtesting), tes dépôts et tes réglages dans le modèle. */
+async function exportJournal(state) {
+  try {
+    const res = await fetch(new URL('assets/modele-journal.xlsx', document.baseURI));
+    if (!res.ok) throw new Error('Modèle Excel introuvable. Vérifie ta connexion et réessaie.');
+    const bytes = await buildJournalXlsx({ trades: state.trades, settings: state.settings, template: new Uint8Array(await res.arrayBuffer()) });
+    download(JOURNAL_FILENAME, bytes, XLSX_TYPE);
+    toast('Journal Excel téléchargé.');
+  } catch (err) { console.error(err); toast(err.message || 'Export impossible.', 'error'); }
+}
 const day = () => new Date().toISOString().slice(0, 10);
 
 
@@ -174,9 +186,10 @@ export default function Settings({ state }) {
       </div>
       <section className="card" id="sec-donnees" style={{ '--i': 1 }}>
         <h2>Données</h2>
-        <p className="sub" style={{ margin: '4px 0 12px' }}>{state.persistent ? 'Tes trades sont enregistrés dans ce navigateur. Fais une sauvegarde régulière.' : 'Attention : stockage permanent indisponible (navigation privée ?). Exporte une sauvegarde.'}</p>
+        <p className="sub" style={{ margin: '4px 0 12px' }}>{state.persistent ? 'Tes trades sont enregistrés dans ce navigateur. Fais une sauvegarde régulière. Le journal Excel contient tes trades, tes dépôts et tes réglages de pip ; la sauvegarde JSON garde aussi les captures, les idées et tout le reste.' : 'Attention : stockage permanent indisponible (navigation privée ?). Exporte une sauvegarde.'}</p>
         <div className="row">
-          <button className="btn primary" onClick={async () => { download(`easyjournal-sauvegarde-${day()}.json`, JSON.stringify(buildBackup({ trades: state.trades, ideas: state.ideas, settings: s }), null, 2), 'application/json'); await saveSettings({ lastBackupAt: Date.now() }); toast('Sauvegarde téléchargée.'); }}>Sauvegarde complète (JSON)</button>
+          <button className="btn primary" onClick={() => exportJournal(state)}>Journal Excel (version finale)</button>
+          <button className="btn" onClick={async () => { download(`easyjournal-sauvegarde-${day()}.json`, JSON.stringify(buildBackup({ trades: state.trades, ideas: state.ideas, settings: s }), null, 2), 'application/json'); await saveSettings({ lastBackupAt: Date.now() }); toast('Sauvegarde téléchargée.'); }}>Sauvegarde complète (JSON)</button>
           <button className="btn" onClick={() => { download(`easyjournal-trades-${day()}.csv`, stringifyCSV(tradesToRows([...state.trades].sort((a, b) => (a.date < b.date ? -1 : 1)), s.customFields)), 'text/csv'); toast('CSV téléchargé.'); }}>Tous les trades (CSV)</button>
         </div>
         {state.trades.some(isDemo) && <>
