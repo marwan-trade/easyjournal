@@ -4,7 +4,7 @@ import { shotKey } from '../sync/shots.js';
  * Les écrans s'abonnent avec subscribe() et se redessinent à chaque changement.
  */
 import { openDatabase } from './db.js';
-import { DEFAULT_SETTINGS, SCHEMA_VERSION, mergeSettings, withSuggestion } from './settings.js';
+import { DEFAULT_SETTINGS, SCHEMA_VERSION, mergeSettings, withSuggestion, changedKeys } from './settings.js';
 import { normalizeTrade, newId, dedupeKey } from '../domain/trade.js';
 import { isDemoId } from '../sync/engine.js';
 import { takeSnapshot, listSnapshots, withCurrentShots } from './snapshots.js';
@@ -18,6 +18,7 @@ export const state = {
   trades: [],
   ideas: [],
   settings: structuredClone(DEFAULT_SETTINGS),
+  settingsKeyAt: {}, // date de dernière modification de chaque réglage (fusion entre appareils)
   settingsAt: 0, // horodatage de la dernière modification des réglages (synchronisation)
   rev: 0, // compteur de modifications LOCALES : déclenche la synchronisation automatique
 };
@@ -36,6 +37,7 @@ export async function init(backend = null) {
   state.ideas = ideas;
   state.settings = mergeSettings(meta?.value);
   state.settingsAt = meta?.at ?? 0;
+  state.settingsKeyAt = meta?.keyAt ?? {};
   const schema = await db.get('meta', 'schemaVersion');
   if (!schema) await db.put('meta', { key: 'schemaVersion', value: SCHEMA_VERSION });
   // Migrations de DONNÉES futures : if (schema.value < 2) { ...transformer state.trades... }
@@ -71,10 +73,14 @@ export const tradesOf = (mode) => state.trades.filter((t) => t.mode === mode);
 
 /* ----- Réglages ----- */
 export async function saveSettings(patch) {
+  const before = state.settings;
   state.settings = mergeSettings({ ...state.settings, ...patch });
   state.settingsAt = Date.now();
+  const keyAt = { ...state.settingsKeyAt };
+  for (const k of changedKeys(before, state.settings)) keyAt[k] = state.settingsAt;
+  state.settingsKeyAt = keyAt;
   state.rev += 1;
-  await db.put('meta', { key: 'settings', value: state.settings, at: state.settingsAt });
+  await db.put('meta', { key: 'settings', value: state.settings, at: state.settingsAt, keyAt });
   emit();
 }
 
@@ -200,7 +206,13 @@ export async function wipeAll() {
   await tombstone('trades', goneT); await tombstone('ideas', goneI); // propagées au cloud si tu es connecté
   state.trades = [];
   state.ideas = [];
+  const old = state.settings;
   state.settings = mergeSettings(null);
+  // Remise à zéro volontaire : datée, pour qu'elle l'emporte sur les anciens réglages restés dans le cloud.
+  state.settingsAt = Date.now();
+  state.settingsKeyAt = Object.fromEntries(changedKeys(old, state.settings).map((k) => [k, state.settingsAt]));
+  await db.put('meta', { key: 'settings', value: state.settings, at: state.settingsAt, keyAt: state.settingsKeyAt });
+  state.rev += 1;
   emit();
 }
 
@@ -228,7 +240,7 @@ export function syncAdapter() {
   return {
     trades: () => state.trades,
     ideas: () => state.ideas,
-    settings: () => ({ data: state.settings, at: state.settingsAt }),
+    settings: () => ({ data: state.settings, at: state.settingsAt, keyAt: state.settingsKeyAt }),
     tombstones: async () => (await db.get('meta', 'tombstones'))?.value ?? { trades: {}, ideas: {} },
     getMeta: async (k) => (await db.get('meta', `sync-${k}`))?.value ?? null,
     setMeta: async (k, v) => { await db.put('meta', { key: `sync-${k}`, value: v }); },
@@ -263,14 +275,15 @@ export function syncAdapter() {
       }
       if (ideas.remove.length) { await Promise.all(ideas.remove.map((id) => db.delete('ideas', id))); const g = new Set(ideas.remove); state.ideas = state.ideas.filter((i) => !g.has(i.id)); }
       if (settings) {
-        state.settings = mergeSettings(settings.data); state.settingsAt = settings.at;
-        await db.put('meta', { key: 'settings', value: state.settings, at: settings.at });
+        state.settings = mergeSettings(settings.data); state.settingsAt = settings.at; state.settingsKeyAt = settings.keyAt ?? {};
+        await db.put('meta', { key: 'settings', value: state.settings, at: settings.at, keyAt: state.settingsKeyAt });
       }
       // Des trades de backtest arrivent d'un autre appareil alors que l'interface Backtesting est fermée ici : on l'ouvre,
       // sinon ces trades seraient invisibles (le sélecteur Réel/Backtest n'apparaît que si elle est ouverte).
       if (!state.settings.backtest && up.some((t) => t.mode === 'backtest')) {
         state.settings = mergeSettings({ ...state.settings, backtest: true }); state.settingsAt = Date.now();
-        await db.put('meta', { key: 'settings', value: state.settings, at: state.settingsAt });
+        state.settingsKeyAt = { ...state.settingsKeyAt, backtest: state.settingsAt };
+        await db.put('meta', { key: 'settings', value: state.settings, at: state.settingsAt, keyAt: state.settingsKeyAt });
       }
       if (up.length || trades.remove.length || ideas.upsert.length || ideas.remove.length || settings) emit();
     },

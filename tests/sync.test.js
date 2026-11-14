@@ -247,3 +247,37 @@ test('synchro : des trades de backtest reçus ouvrent l\'interface Backtesting (
   assert.equal(appState.trades.some((t) => t.id === 'bt1' && t.mode === 'backtest'), true);
   assert.equal(appState.settings.backtest, true);
 });
+
+import { mergeSettingSets } from '../src/core/store/settings.js';
+test('réglages : le dépôt saisi sur un appareil n\'est pas écrasé par les réglages par défaut d\'un autre', () => {
+  const cloud = { data: { initialCapital: { reel: 50, backtest: 200 }, theme: 'auto' }, at: 100, keyAt: { 'initialCapital.reel': 100, 'initialCapital.backtest': 100 } };
+  // téléphone neuf : aucun dépôt, mais il vient de changer le thème (date plus récente)
+  const phone = { data: { initialCapital: { reel: 0, backtest: 0 }, theme: 'dark' }, at: 500, keyAt: { theme: 500 } };
+  const m = mergeSettingSets(phone, cloud);
+  assert.deepEqual(m.data.initialCapital, { reel: 50, backtest: 200 });
+  assert.equal(m.data.theme, 'dark');
+  // même résultat dans l'autre sens
+  const m2 = mergeSettingSets(cloud, phone);
+  assert.deepEqual(m2.data.initialCapital, { reel: 50, backtest: 200 }); assert.equal(m2.data.theme, 'dark');
+});
+test('réglages : deux appareils modifient chacun un dépôt différent, les deux sont gardés', () => {
+  const a = { data: { initialCapital: { reel: 80, backtest: 0 } }, at: 300, keyAt: { 'initialCapital.reel': 300 } };
+  const b = { data: { initialCapital: { reel: 0, backtest: 150 } }, at: 400, keyAt: { 'initialCapital.backtest': 400 } };
+  assert.deepEqual(mergeSettingSets(a, b).data.initialCapital, { reel: 80, backtest: 150 });
+});
+test('réglages : la modification la plus récente d\'une même clé gagne', () => {
+  const a = { data: { initialCapital: { reel: 80 } }, at: 300, keyAt: { 'initialCapital.reel': 300 } };
+  const b = { data: { initialCapital: { reel: 120 } }, at: 400, keyAt: { 'initialCapital.reel': 400 } };
+  assert.equal(mergeSettingSets(a, b).data.initialCapital.reel, 120);
+  assert.equal(mergeSettingSets(b, a).data.initialCapital.reel, 120);
+});
+test('synchro de bout en bout : un téléphone neuf récupère les dépôts du PC', async () => {
+  const server = fakeServer(); const pc = fakeDevice(); const phone = fakeDevice();
+  pc.set = { data: { initialCapital: { reel: 50, backtest: 200 } }, at: 900, keyAt: { 'initialCapital.reel': 900, 'initialCapital.backtest': 900 } };
+  await sync(server, pc);
+  phone.set = { data: { theme: 'dark' }, at: 5000, keyAt: { theme: 5000 } }; // réglage local plus récent
+  await sync(server, phone);
+  assert.deepEqual(phone.set.data.initialCapital, { reel: 50, backtest: 200 });
+  await sync(server, pc);
+  assert.equal(pc.set.data.theme, 'dark'); assert.deepEqual(pc.set.data.initialCapital, { reel: 50, backtest: 200 });
+});

@@ -52,3 +52,42 @@ export function withSuggestion(list, value) {
   if (!v) return list;
   return list.some((x) => x.toLowerCase() === v.toLowerCase()) ? list : [...list, v];
 }
+
+/* ----- Fusion des réglages entre appareils, clé par clé ----- */
+// Chaque réglage a son propre horodatage (keyAt) : changer le thème sur un appareil n'écrase plus le dépôt saisi sur l'autre.
+const flatKeys = Object.keys(DEFAULT_SETTINGS).flatMap((k) => (k === 'initialCapital' ? ['initialCapital.reel', 'initialCapital.backtest'] : [k]));
+const getFlat = (data, k) => {
+  const [a, b] = k.split('.');
+  const src = data && typeof data === 'object' && a in data ? data[a] : DEFAULT_SETTINGS[a];
+  return b ? (isObj(src) && b in src ? src[b] : DEFAULT_SETTINGS[a][b]) : src;
+};
+const setFlat = (data, k, v) => { const [a, b] = k.split('.'); if (b) data[a] = { ...(isObj(data[a]) ? data[a] : DEFAULT_SETTINGS[a]), [b]: v }; else data[a] = v; };
+const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+const sortedAt = (m) => Object.fromEntries(Object.entries(m ?? {}).filter(([, v]) => v > 0).sort(([a], [b]) => (a < b ? -1 : 1)));
+
+/** Clés dont la valeur diffère entre deux réglages (pour dater les modifications locales). */
+export const changedKeys = (before, after) => flatKeys.filter((k) => !same(getFlat(before, k), getFlat(after, k)));
+
+/**
+ * Fusionne deux jeux de réglages { data, at, keyAt }. Par clé : la modification la plus récente gagne ;
+ * à date égale (anciennes données sans horodatage), la valeur réellement saisie l'emporte sur la valeur par défaut.
+ */
+export function mergeSettingSets(local, remote) {
+  const data = {}; const keyAt = {};
+  for (const k of flatKeys) {
+    const lv = getFlat(local.data, k); const rv = getFlat(remote.data, k);
+    const lt = local.keyAt?.[k] ?? 0; const rt = remote.keyAt?.[k] ?? 0;
+    const def = getFlat({}, k);
+    let pickRemote;
+    if (same(lv, rv)) pickRemote = false;
+    else if (lt !== rt) pickRemote = rt > lt;
+    else if (same(lv, def)) pickRemote = true;
+    else if (same(rv, def)) pickRemote = false;
+    else pickRemote = (remote.at ?? 0) > (local.at ?? 0);
+    setFlat(data, k, structuredClone(pickRemote ? rv : lv));
+    keyAt[k] = Math.max(lt, rt);
+  }
+  return { data, keyAt: sortedAt(keyAt), at: Math.max(local.at ?? 0, remote.at ?? 0) };
+}
+/** Deux jeux de réglages disent-ils la même chose (valeurs et dates) ? */
+export const sameSettingSets = (a, b) => flatKeys.every((k) => same(getFlat(a.data, k), getFlat(b.data, k))) && same(sortedAt(a.keyAt), sortedAt(b.keyAt));

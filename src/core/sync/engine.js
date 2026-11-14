@@ -5,6 +5,7 @@
  * sont propagées par des « pierres tombales ». Aucune donnée n'est effacée sans signal explicite.
  */
 import { shotKey, parseDataUrl, toDataUrl } from './shots.js';
+import { mergeSettingSets, sameSettingSets } from '../store/settings.js';
 
 const at = (x) => Number(x?.updatedAt ?? x?.createdAt ?? 0);
 export const isDemoId = (id) => String(id).startsWith('demo-');
@@ -34,8 +35,14 @@ export function planMerge({ local, tombstones, remote }) {
     }
   }
   const rs = remote.settings; const ls = local.settings;
-  if (rs && Number(rs.updated_at) > (ls.at ?? 0)) plan.apply.settings = { data: rs.data, at: Number(rs.updated_at) };
-  else if (!rs || Number(rs.updated_at) < (ls.at ?? 0)) plan.push.settings = true;
+  if (!rs) plan.push.settings = true;
+  else {
+    const rset = { data: rs.data, at: Number(rs.updated_at), keyAt: rs.data?._keyAt };
+    const lset = { data: ls.data, at: ls.at ?? 0, keyAt: ls.keyAt };
+    const merged = mergeSettingSets(lset, rset);
+    if (!sameSettingSets(merged, lset)) plan.apply.settings = merged;
+    if (!sameSettingSets(merged, rset)) plan.push.settings = true;
+  }
   return plan;
 }
 
@@ -108,7 +115,7 @@ export async function runSync({ client, adapter, now = Date.now }) {
   await client.upsert('trades', [...tradeRows, ...tombRows('trades')]);
   await client.upsert('ideas', [...ideaRows, ...tombRows('ideas')]);
   const ls = adapter.settings();
-  if (plan.push.settings || (ls.at ?? 0) >= cut) await client.upsert('user_settings', [{ data: ls.data, updated_at: ls.at || started }], 'user_id');
+  if (plan.push.settings || (ls.at ?? 0) >= cut) await client.upsert('user_settings', [{ data: { ...ls.data, _keyAt: ls.keyAt ?? {} }, updated_at: Math.max(ls.at || 0, started) }], 'user_id');
 
   // Captures des trades supprimés : on les efface aussi du stockage.
   if (client.deleteShot) {
