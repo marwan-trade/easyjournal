@@ -266,6 +266,12 @@ export function syncAdapter() {
         state.settings = mergeSettings(settings.data); state.settingsAt = settings.at;
         await db.put('meta', { key: 'settings', value: state.settings, at: settings.at });
       }
+      // Des trades de backtest arrivent d'un autre appareil alors que l'interface Backtesting est fermée ici : on l'ouvre,
+      // sinon ces trades seraient invisibles (le sélecteur Réel/Backtest n'apparaît que si elle est ouverte).
+      if (!state.settings.backtest && up.some((t) => t.mode === 'backtest')) {
+        state.settings = mergeSettings({ ...state.settings, backtest: true }); state.settingsAt = Date.now();
+        await db.put('meta', { key: 'settings', value: state.settings, at: state.settingsAt });
+      }
       if (up.length || trades.remove.length || ideas.upsert.length || ideas.remove.length || settings) emit();
     },
   };

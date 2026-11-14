@@ -236,3 +236,14 @@ test('mot de passe oublié : requêtes Supabase (envoi du lien, nouveau mot de p
   assert.deepEqual(JSON.parse(calls[1].body), { password: 'nouveau1' });
   assert.equal(u.email, 'a@b.c'); assert.equal(c.signedIn, true);
 });
+
+import { init, syncAdapter, state as appState } from '../src/core/store/state.js';
+import { MemoryBackend } from '../src/core/store/db.js';
+test('synchro : des trades de backtest reçus ouvrent l\'interface Backtesting (sinon invisibles)', async () => {
+  await init(new MemoryBackend());
+  assert.equal(appState.settings.backtest, false);
+  const noop = { trades: { upsert: [], remove: [] }, ideas: { upsert: [], remove: [] }, settings: null };
+  await syncAdapter().applyRemote({ ...noop, trades: { upsert: [{ id: 'bt1', pair: 'EURUSD', mode: 'backtest', date: '2026-11-10', result: 'gagnant', updatedAt: 5 }], remove: [] } });
+  assert.equal(appState.trades.some((t) => t.id === 'bt1' && t.mode === 'backtest'), true);
+  assert.equal(appState.settings.backtest, true);
+});
